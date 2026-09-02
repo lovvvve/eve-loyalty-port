@@ -15,9 +15,9 @@ Blocked by: 05, 06, 07
 
 **分支选择**：按 `prototype` 技能判定为 **逻辑/状态模型原型**（LOGIC 分支），不是 UI 变体稿。理由：仓库尚无任何代码或路由框架；问题的核心是「03–08 号决策组成的闭环推到真实场景是否说得通、各角色是否知道下一步该谁做」。页面组织只做到「按角色分工作台 + 全局账本」这一层，视觉方向留待本票据解决后的信息架构工单。
 
-**原型位置（primary source，不进 main）**
+**原型位置（随仓库提交保存，与 research/ 资产同样处理）**
 
-- 分支：`prototype/09-core-workflow`（已推送 origin）
+- 首次提交于分支 `prototype/09-core-workflow`（已推送 origin），并入 main 后以 main 上的文件为准
 - 文件：`.scratch/lp-transfer-platform/prototypes/09-core-workflow-prototype.html`，单文件、无依赖，双击即开，状态只在内存中
 - 在线版本（私有 Artifact，可从页面分享给成员/审批者/执行者/审计者）：https://claude.ai/code/artifact/f5627d59-805b-4c45-b997-f747e25faf56
 - 纯逻辑模块位于文件内 `@@MODULE-START` / `@@MODULE-END` 之间（`LoyaltyPortMachine`：`initialState` + `dispatch(state, action)`），不触碰 DOM，可整体搬入真实代码库作为状态机起点；页面壳可丢弃
@@ -39,4 +39,4 @@ Blocked by: 05, 06, 07
 8. 库存短缺只做负库存调整 + 原 FIFO 重算 + 建立库存差异案件；未模拟发行方级处理冻结、账外转账事件、LP 回收、维护模式、期初导入阶段关闭。
 9. 疑似重复候选只在执行登记时提示，不做任何自动处置。
 
-**待各角色走通后回填**：把「这不该被允许」「我以为会是 X」之类的反馈按角色记到下面，再在 `## Answer` 写结论（哪些页面组织/状态表达/风险提示/操作反馈有效，哪些要改），把 `Status:` 置为 `resolved` 并在 `map.md` 追加一行。原型本身留在 `prototype/09-core-workflow` 分支，不合入 main。
+**待各角色走通后回填**：把「这不该被允许」「我以为会是 X」之类的反馈按角色记到下面，再在 `## Answer` 写结论（哪些页面组织/状态表达/风险提示/操作反馈有效，哪些要改），把 `Status:` 置为 `resolved` 并在 `map.md` 追加一行。原型文件随仓库保存在 `.scratch/lp-transfer-platform/prototypes/` 目录，后续修改直接在该文件上迭代并提交。
