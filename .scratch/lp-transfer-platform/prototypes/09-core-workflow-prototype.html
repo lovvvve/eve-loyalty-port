@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  PROTOTYPE — 可丢弃的原型，不是产品代码。
+  对应决策工单 .scratch/lp-transfer-platform/issues/09-core-workflow-prototype.md。
+  单文件、无依赖：双击即可打开。纯逻辑模块位于 @@MODULE-START/END 之间，页面壳位于其后。
+-->
+<title>忠诚星港流程原型</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9; --card: #ffffff; --ink: #1c2430; --muted: #66707d; --line: #e2e6eb;
+  --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #e6f4f2;
+  --danger: #b42318; --danger-soft: #fdecea; --warn: #b7791f; --warn-soft: #fff4dc;
+  --ok: #1f7a4d; --ok-soft: #e7f5ec; --chip: #eef1f4; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161b; --card: #1a2028; --ink: #e6eaef; --muted: #9aa5b1; --line: #2a323c;
+    --accent: #2dd4bf; --accent-ink: #062a27; --accent-soft: #14312f;
+    --danger: #f87171; --danger-soft: #3a1c1c; --warn: #fbbf24; --warn-soft: #3a2e12;
+    --ok: #4ade80; --ok-soft: #14301f; --chip: #242c36;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161b; --card: #1a2028; --ink: #e6eaef; --muted: #9aa5b1; --line: #2a323c;
+  --accent: #2dd4bf; --accent-ink: #062a27; --accent-soft: #14312f;
+  --danger: #f87171; --danger-soft: #3a1c1c; --warn: #fbbf24; --warn-soft: #3a2e12;
+  --ok: #4ade80; --ok-soft: #14301f; --chip: #242c36;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 14px/1.55 -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+}
+.wrap { max-width: 1440px; margin: 0 auto; padding: 20px 20px 80px; }
+.hero h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: .2px; }
+.hero .lede { margin: 0 0 10px; color: var(--muted); max-width: 980px; }
+.hero .question { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin: 12px 0; max-width: 1100px; }
+.hero .question p { margin: 0 0 6px; }
+.hero details { max-width: 1100px; margin: 8px 0 0; }
+.hero summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.hero details ol, .hero details ul { margin: 8px 0 0; padding-left: 22px; color: var(--ink); }
+.hero details li { margin: 4px 0; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; margin-top: 18px; align-items: start; }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static !important; max-height: none !important; } }
+.side { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 2px; }
+.main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card h2 { font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.card h3 { font-size: 14px; margin: 14px 0 6px; color: var(--ink); }
+.card h2 .sub, .card h3 .sub { color: var(--muted); font-weight: 400; font-size: 12px; }
+.hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px; padding: 5px 11px; cursor: pointer; font-size: 13px; line-height: 1.2; }
+.chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.chip small { opacity: .75; margin-left: 4px; }
+.roles { margin-top: 8px; color: var(--muted); font-size: 12.5px; }
+.tag { display: inline-block; background: var(--chip); border-radius: 4px; padding: 1px 6px; font-size: 12px; margin-right: 4px; }
+.banner { border-radius: 8px; padding: 10px 12px; border: 1px solid var(--line); background: var(--card); }
+.banner.ok { background: var(--ok-soft); border-color: transparent; }
+.banner.blocked { background: var(--danger-soft); border-color: transparent; }
+.banner.audit { background: var(--danger-soft); border-color: var(--danger); }
+.banner.warn { background: var(--warn-soft); border-color: transparent; }
+.banner.info { background: var(--accent-soft); border-color: transparent; }
+.banner .who { font-weight: 600; margin-right: 6px; }
+.banner .k { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: block; margin-bottom: 2px; }
+button { font: inherit; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 7px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn.sm { padding: 3px 9px; font-size: 12.5px; font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.mono { font-family: var(--mono); font-size: 12px; }
+.tablewrap { overflow-x: auto; }
+.badge { display: inline-block; border-radius: 5px; padding: 1px 7px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.badge.waiting { background: var(--chip); color: var(--ink); }
+.badge.active { background: var(--accent-soft); color: var(--accent); }
+.badge.good { background: var(--ok-soft); color: var(--ok); }
+.badge.bad { background: var(--danger-soft); color: var(--danger); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.muted { background: var(--chip); color: var(--muted); text-decoration: line-through; }
+.mismatch { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.match { color: var(--ok); }
+.neg { color: var(--danger); font-weight: 700; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-size: 13px; }
+.kv .k { color: var(--muted); }
+form.act { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: flex-end; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; margin: 6px 0; }
+form.act label { display: flex; flex-direction: column; font-size: 11.5px; color: var(--muted); gap: 2px; }
+form.act label.inline { flex-direction: row; align-items: center; gap: 6px; padding-bottom: 6px; }
+form.act input, form.act select, form.act textarea { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 90px; }
+form.act input[type="checkbox"] { min-width: 0; }
+form.act .title { width: 100%; font-weight: 600; font-size: 13px; color: var(--ink); }
+.clock { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.clock .now { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tab { border: 1px solid var(--line); background: var(--chip); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12.5px; }
+.tab.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.step { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); }
+.step.cur { border-color: var(--accent); background: var(--accent-soft); }
+.step.done { opacity: .85; }
+.step .n { font-weight: 700; color: var(--muted); font-size: 12px; padding-top: 2px; }
+.step .who { font-size: 11.5px; color: var(--muted); }
+.step .res { font-size: 12px; margin-top: 3px; }
+.step .res.ok { color: var(--ok); } .step .res.blocked { color: var(--danger); } .step .res.mismatch { color: var(--warn); font-weight: 700; }
+.step button { margin-top: 4px; }
+.expect { font-size: 11px; color: var(--muted); }
+.watch { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink); }
+.events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 520px; overflow: auto; }
+.ev { display: grid; grid-template-columns: 100px 74px 1fr; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; border-left: 3px solid var(--line); background: var(--card); }
+.ev.ok { border-left-color: var(--ok); } .ev.blocked { border-left-color: var(--danger); background: var(--danger-soft); }
+.ev.audit { border-left-color: var(--danger); background: var(--danger-soft); } .ev.system { border-left-color: var(--accent); } .ev.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.ev .t { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; } .ev .a { font-weight: 600; white-space: nowrap; }
+.empty { color: var(--muted); font-style: italic; }
+.small { font-size: 12px; color: var(--muted); }
+details.tl summary { cursor: pointer; font-size: 12.5px; color: var(--accent); }
+details.tl ul { margin: 4px 0 0; padding-left: 16px; font-size: 12.5px; }
+.callout { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 6px 0; }
+.callout.info { border-left-color: var(--accent); background: var(--accent-soft); }
+.callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+.footer { color: var(--muted); font-size: 12px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>忠诚星港 · 核心流程原型</h1>
+    <p class="lede">一个可以双击打开、随手点按钮的状态机演示。切换身份，把 LP 转账单从「期初未初始化」一路推到「已完成」或「异常结案」，看看每一步谁负责、哪些操作被拦、余额与库存怎么动。</p>
+    <div class="question">
+      <p><strong>本原型要回答的问题（决策工单 09）：</strong>让真实的成员、审批者、执行者、复核者与审计者走通「查看分发行方余额 → 申请或代建 → 审批 → 人工执行登记 → 复核/对账确认 → 查询历史与异常」的完整闭环。哪些页面组织、状态表达、风险提示与操作反馈，能让各角色正确理解当前责任，并减少错转、漏转和重复转？闭环包含注册后的「期初未初始化」提示、申请初始化入口与期初确认页。</p>
+      <p class="small">这是一个<strong>逻辑/状态模型原型</strong>（不是视觉稿）：它把 03–08 号决策写成一台纯状态机，页面只是薄壳。想看的是「这个模型推到真实场景时是否说得通」，以及各角色工作台上的信息是否足以让人知道下一步该谁做。</p>
+    </div>
+    <details>
+      <summary>为写成状态机而做的简化假设与待确认设计点（请在走通后逐条判断）</summary>
+      <ol>
+        <li><strong>待库存 → 分配库存由系统自动按 FIFO 触发</strong>（新快照批准、订单撤回/取消释放分配后）。决策 05 未写明触发者；采用严格 FIFO：队头放不下则整体等待，不让后面的小单插队。</li>
+        <li><strong>异常调查者由合格的复核者自行「认领调查」</strong>。决策 07 只要求 24 小时内指派，未写明由谁指派。</li>
+        <li><strong>结构化登记与订单不一致或缺凭证时，系统硬性禁止复核者裁定「精确转出」</strong>，只能进执行异常。这是原型新增的护栏，待确认是否写入规格。</li>
+        <li><strong>调查者裁定「精确转出 / 确认未转」直接生效</strong>；只有「确认错误事实并异常结案」才生成账务处置提案走双审批（决策 06 的审批矩阵只对结案处置要求双审批）。</li>
+        <li><strong>首次绑定结算公司若与期初提案登记的 corporation_id 不一致，也走 24 小时等待期</strong>（按决策 08 的表述推断；决策 04 对首次绑定未明确）。</li>
+        <li><strong>执行前 15 分钟余额确认</strong>简化为执行登记表单上的一个声明勾选，未勾选只记风险提示，不阻断（游戏操作已发生，阻断无意义）。</li>
+        <li><strong>游戏操作后 30 分钟内提交登记</strong>的时限，用「领取独占到期」这一个时钟代替；声明时间不做校验。</li>
+        <li><strong>库存短缺</strong>只做「负库存调整 + 按原 FIFO 重算 + 建立库存差异案件」，未模拟发行方级处理冻结与双审批接受未知风险；账外转账事件、LP 回收、维护模式、期初导入阶段关闭亦未纳入。</li>
+        <li>疑似重复候选只在执行登记时按「30 分钟内同接收方/发行方/数量」或「相同凭证哈希」提示，不做任何自动处置。</li>
+        <li>所有人物都是平台成员（聚合 SSO 身份）；管理类人物在演示里已完成零期初确认，以免噪音。</li>
+      </ol>
+    </details>
+  </header>
+
+  <div class="layout">
+    <div class="main">
+      <section class="card" id="workbench"></section>
+      <section class="card" id="global"></section>
+      <section class="card" id="actions"></section>
+      <section class="card" id="timeline"></section>
+      <p class="footer">忠诚星港（Loyalty Port）核心流程原型 · 单文件、无后端、状态只在内存中，刷新即重置。术语以仓库 CONTEXT.md 为准。EVE Online 及相关名称归其权利人所有，本原型与 CCP Games 无关。</p>
+    </div>
+    <aside class="side">
+      <section class="card" id="who"></section>
+      <section id="msg"></section>
+      <section class="card" id="clock"></section>
+      <section class="card" id="scenarios"></section>
+    </aside>
+  </div>
+</div>
+
+<script>
+// @@MODULE-START
+// ============================================================
+// 忠诚星港 · 核心流程原型 —— 纯逻辑模块
+// 只依赖普通 JS 数据，不触碰 DOM。页面只调用它，不反向依赖。
+// 若原型验证通过，本模块可整体搬入真实代码库作为状态机起点。
+// ============================================================
+const LoyaltyPortMachine = (() => {
+  const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR;
+  const BASE_TIME = Date.UTC(2026, 8, 1, 0, 0, 0); // 切换点：2026-09-01 00:00（EVE 时间）
+
+  const ROLES = {
+    member: '成员', finance: '财务经办者', approver: '审批者', executor: '执行者',
+    reviewer: '复核者', admin: '管理员', auditor: '审计者',
+  };
+
+  const PERSONAS = {
+    A: { id: 'A', name: '阿雷', roles: ['member'] },
+    B: { id: 'B', name: '贝拉', roles: ['member'] },
+    C: { id: 'C', name: '陈经办', roles: ['member', 'finance'] },
+    D: { id: 'D', name: '丁审批', roles: ['member', 'approver'] },
+    E: { id: 'E', name: '戊多职', roles: ['member', 'approver', 'executor', 'reviewer'] },
+    F: { id: 'F', name: '己执行', roles: ['member', 'executor', 'reviewer'] },
+    G: { id: 'G', name: '庚执行', roles: ['member', 'executor'] },
+    H: { id: 'H', name: '辛管理', roles: ['member', 'admin'] },
+    I: { id: 'I', name: '壬审计', roles: ['member', 'auditor'] },
+    J: { id: 'J', name: '癸审批', roles: ['member', 'approver'] },
+  };
+
+  const ISSUERS = {
+    CN: { id: 'CN', name: 'Caldari Navy' },
+    SOE: { id: 'SOE', name: 'Sisters of EVE' },
+  };
+
+  const MAIN_CORP_ID = '98000001';
+  const CORPS = {
+    '98000001': { name: '主军团（忠诚星港）', ticker: 'LYPT' },
+    '98000101': { name: '阿雷星际控股', ticker: 'AREH' },
+    '98000102': { name: '贝拉深空物流', ticker: 'BELA' },
+    '98000103': { name: '丁氏边境贸易', ticker: 'DING' },
+    '98000109': { name: '无主漂流公司', ticker: 'NOBD' },
+  };
+
+  const ORDER_STATES = {
+    pending_approval: '待审批', awaiting_inventory: '待库存', ready: '待执行', executing: '执行中',
+    pending_review: '待复核', completed: '已完成', failed: '执行失败', exception: '执行异常',
+    exception_closed: '异常结案', rejected: '已拒绝', withdrawn: '已撤回', cancelled: '已取消',
+  };
+  const TERMINAL = new Set(['completed', 'failed', 'exception_closed', 'rejected', 'withdrawn', 'cancelled']);
+  const EXEC_CLASS = new Set(['executing', 'pending_review', 'exception']); // 执行类订单：不得强制取消
+  const ALLOCATED_STATES = new Set(['ready', 'executing', 'pending_review', 'exception']); // 占用库存分配
+  const SAFE_CANCEL_STATES = new Set(['pending_approval', 'awaiting_inventory', 'ready']); // 领取前可安全撤回/取消
+
+  const OPENING_STATUS = {
+    uninitialized: '期初未初始化', requested: '已申请初始化，等待财务', proposed: '期初提案审批中',
+    awaiting_confirm: '待成员期初确认', confirmed: '期初已确认', disputed: '期初已确认并提出异议',
+  };
+  const CONFIRMED_SET = new Set(['confirmed', 'disputed']);
+
+  const PROPOSAL_TYPES = {
+    opening: { label: '成员期初提案', approvals: 2 },
+    snapshot: { label: '钱包快照', approvals: 1 },
+    adjustment: { label: '权益调整', approvals: 2 },
+    closure: { label: '异常结案账务处置', approvals: 2 },
+  };
+
+  const CASE_TYPES = { exec_exception: '执行异常', opening_dispute: '期初异议', inventory_diff: '库存差异' };
+
+  class Deny extends Error { constructor(msg, audit = false) { super(msg); this.audit = audit; } }
+  const deny = (msg, audit = false) => { throw new Deny(msg, audit); };
+
+  const clone = (o) => (typeof structuredClone === 'function' ? structuredClone(o) : JSON.parse(JSON.stringify(o)));
+
+  // ---------- 格式化 ----------
+  function fmtTime(ms) {
+    const rel = ms - BASE_TIME;
+    const day = Math.floor(rel / DAY) + 1;
+    const rem = rel - (day - 1) * DAY;
+    const hh = String(Math.floor(rem / HOUR)).padStart(2, '0');
+    const mm = String(Math.floor((rem % HOUR) / MIN)).padStart(2, '0');
+    return `第${day}天 ${hh}:${mm}`;
+  }
+  function fmtDuration(ms) {
+    if (ms < 0) ms = -ms;
+    if (ms >= DAY) return `${Math.floor(ms / DAY)} 天 ${Math.floor((ms % DAY) / HOUR)} 小时`;
+    if (ms >= HOUR) return `${Math.floor(ms / HOUR)} 小时 ${Math.floor((ms % HOUR) / MIN)} 分`;
+    return `${Math.floor(ms / MIN)} 分`;
+  }
+  const corpLabel = (corpId) => corpId ? `${CORPS[corpId]?.name || '未知公司'} [${CORPS[corpId]?.ticker || '?'}] (${corpId})` : '—';
+
+  // ---------- 初始状态 ----------
+  function mkMember(id, opts = {}) {
+    const p = PERSONAS[id];
+    const ent = { CN: 0, SOE: 0, ...(opts.entitlement || {}) };
+    return {
+      id, name: p.name,
+      registered: !!opts.registered,
+      registeredAt: opts.registered ? BASE_TIME + 6 * HOUR : null,
+      opening: {
+        status: opts.registered ? (opts.openingStatus || 'confirmed') : 'uninitialized',
+        proposalId: null, entries: opts.registered ? { ...ent } : null,
+        registeredCorpId: opts.registeredCorpId || null, requestedAt: null, confirmedAt: null,
+      },
+      company: {
+        current: opts.corpId ? { corpId: opts.corpId, ...CORPS[opts.corpId], since: BASE_TIME + 7 * HOUR } : null,
+        pending: null, history: [],
+      },
+      entitlement: ent,
+      reserved: { CN: 0, SOE: 0 },
+    };
+  }
+
+  function initialState(opts = {}) {
+    const variant = opts.variant || 'ready';
+    const cnInventory = opts.cnInventory ?? 9000;
+    const soeInventory = opts.soeInventory ?? 4000;
+    const now = BASE_TIME + 8 * HOUR;
+    const snap = (bal) => ({ balance: bal, approvedAt: now - 1 * HOUR, submittedBy: 'C', approvedBy: 'D' });
+    const s = {
+      now, openingPhaseOpen: true,
+      rules: { minTransfer: 100, claimMinutes: 30, reviewHours: 24, approvalDays: 7, snapshotHours: 24, companyWaitHours: 24, readyReminderHours: 24 },
+      openingTotals: { CN: { positive: 12000, negative: 0 }, SOE: { positive: 6000, negative: 0 } },
+      members: {},
+      inventory: {
+        CN: { snapshot: snap(cnInventory), ledger: cnInventory, staleNotified: false },
+        SOE: { snapshot: snap(soeInventory), ledger: soeInventory, staleNotified: false },
+      },
+      orders: [], proposals: [], cases: [], events: [], losses: [], executionsLog: [],
+      idempotency: {},
+      seq: { order: 0, proposal: 0, case: 0, evidence: 0, event: 0 },
+      lastResult: null,
+    };
+    // 管理类人员：已注册、显式零期初、已确认
+    for (const id of ['C', 'E', 'F', 'G', 'H', 'I', 'J']) s.members[id] = mkMember(id, { registered: true });
+    // 丁审批：既是审批者也是有权益的成员（用于利益冲突场景）
+    s.members.D = mkMember('D', { registered: true, entitlement: { CN: 1000 }, corpId: '98000103', registeredCorpId: '98000103' });
+    // 贝拉：普通成员，已就绪
+    s.members.B = mkMember('B', { registered: true, entitlement: { CN: 3000 }, corpId: '98000102', registeredCorpId: '98000102' });
+    // 阿雷：base 变体下尚未注册，用于走通期初闭环；ready 变体下已就绪
+    s.members.A = variant === 'base'
+      ? mkMember('A', { registered: false })
+      : mkMember('A', { registered: true, entitlement: { CN: 5000, SOE: 2000 }, corpId: '98000101', registeredCorpId: '98000101' });
+    log(s, null, `演示开始。切换点 = 2026-09-01 00:00 EVE 时间；当前 ${fmtTime(now)}。期初库存：Caldari Navy ${cnInventory} LP，Sisters of EVE ${soeInventory} LP（1 小时前批准的钱包快照）。`, 'system');
+    return s;
+  }
+
+  // ---------- 通用辅助 ----------
+  function log(s, actor, text, kind = 'ok', extra = {}) {
+    s.seq.event += 1;
+    s.events.push({
+      id: s.seq.event, at: s.now, actorId: actor ? actor.id : null,
+      actorName: actor ? actor.name : '系统', text, kind, ...extra,
+    });
+  }
+  const member = (s, id) => s.members[id] || deny(`成员 ${id} 不存在`);
+  const avail = (m, issuer) => m.entitlement[issuer] - m.reserved[issuer];
+  const hasRole = (p, role) => !!p && p.roles.includes(role);
+  function requireRole(actor, roles, what) {
+    if (!actor) deny('没有操作者身份');
+    if (!roles.some((r) => hasRole(actor, r))) {
+      deny(`越权：${actor.name} 没有「${roles.map((r) => ROLES[r]).join('/')}」角色，不能${what}`, true);
+    }
+  }
+  const orderById = (s, id) => s.orders.find((o) => o.id === id) || deny(`订单 ${id} 不存在`);
+  const proposalById = (s, id) => s.proposals.find((p) => p.id === id) || deny(`提案 ${id} 不存在`);
+  const caseById = (s, id) => s.cases.find((c) => c.id === id) || deny(`案件 ${id} 不存在`);
+
+  function allocatedSum(s, issuer) {
+    return s.orders.filter((o) => o.issuer === issuer && ALLOCATED_STATES.has(o.state)).reduce((a, o) => a + o.amount, 0);
+  }
+  const allocatable = (s, issuer) => s.inventory[issuer].ledger - allocatedSum(s, issuer);
+  function snapshotFresh(s, issuer) {
+    const sn = s.inventory[issuer].snapshot;
+    return !!sn && (s.now - sn.approvedAt) <= s.rules.snapshotHours * HOUR;
+  }
+  function inventoryBlockReason(s, issuer) {
+    const sn = s.inventory[issuer].snapshot;
+    if (!sn) return '该发行方尚无批准的钱包快照，无法证明库存';
+    if (!snapshotFresh(s, issuer)) return `钱包快照已超过 ${s.rules.snapshotHours} 小时，禁止新库存分配和执行`;
+    return null;
+  }
+
+  function setOrderState(s, o, state, actor, note) {
+    const from = o.state;
+    o.state = state;
+    o.timeline.push({ at: s.now, from, to: state, actorId: actor ? actor.id : null, actorName: actor ? actor.name : '系统', note: note || '' });
+  }
+  function releaseReservation(s, o) {
+    const m = s.members[o.memberId];
+    m.reserved[o.issuer] -= o.amount;
+    o.reservationReleased = true;
+  }
+  function memberOwningCorp(s, corpId) {
+    return Object.values(s.members).find((m) => m.company.current && m.company.current.corpId === corpId) || null;
+  }
+
+  // FIFO 库存分配：按批准时间顺序，严格 FIFO（队头放不下则整体等待，不让后面的小单插队）
+  function reallocate(s, issuer, actor, note) {
+    const queue = s.orders.filter((o) => o.issuer === issuer && o.state === 'awaiting_inventory').sort((a, b) => a.approvedAt - b.approvedAt);
+    if (!queue.length) return;
+    const block = inventoryBlockReason(s, issuer);
+    if (block) return;
+    for (const o of queue) {
+      if (o.hold) continue;
+      if (allocatable(s, issuer) >= o.amount) {
+        setOrderState(s, o, 'ready', null, `系统按 FIFO 分配库存 ${o.amount} LP${note ? '（' + note + '）' : ''}`);
+        o.readyAt = s.now; o.reminded = false;
+        log(s, null, `${o.id} 从待库存进入待执行：为其独占分配 ${ISSUERS[issuer].name} 库存 ${o.amount} LP。`, 'system');
+      } else {
+        log(s, null, `${o.id}（${o.amount} LP）仍在待库存：${ISSUERS[issuer].name} 可分配库存仅 ${allocatable(s, issuer)} LP，严格 FIFO，其后订单一并等待。`, 'system');
+        break;
+      }
+    }
+  }
+  // 库存短缺时：待执行订单按原批准顺序重新分配，放不下的退回待库存（执行类订单保留）
+  function reallocateAfterShortage(s, issuer) {
+    const ready = s.orders.filter((o) => o.issuer === issuer && o.state === 'ready').sort((a, b) => a.approvedAt - b.approvedAt);
+    const fixed = allocatedSum(s, issuer) - ready.reduce((a, o) => a + o.amount, 0);
+    let budget = s.inventory[issuer].ledger - fixed;
+    for (const o of ready) {
+      if (budget >= o.amount) { budget -= o.amount; continue; }
+      setOrderState(s, o, 'awaiting_inventory', null, '库存短缺，按原 FIFO 重算后无法覆盖，退回待库存（成员预占保留）');
+      log(s, null, `${o.id} 因库存短缺退回待库存，成员预占继续保留。`, 'warn');
+    }
+  }
+
+  function openCase(s, type, payload) {
+    s.seq.case += 1;
+    const c = {
+      id: `案件-${s.seq.case}`, type, createdAt: s.now, status: 'open', investigator: null,
+      conclusion: null, proposalId: null, notes: [], ...payload,
+    };
+    s.cases.push(c);
+    log(s, null, `建立对账案件 ${c.id}（${CASE_TYPES[type]}）：${payload.summary || ''}`, 'warn');
+    return c;
+  }
+  function toException(s, o, actor, reason) {
+    setOrderState(s, o, 'exception', actor, reason);
+    o.exceptionReason = reason;
+    const c = openCase(s, 'exec_exception', { orderId: o.id, memberId: o.memberId, issuer: o.issuer, summary: `${o.id}：${reason}。成员预占与库存分配继续保留，禁止再次执行。` });
+    o.caseId = c.id;
+  }
+
+  function newProposal(s, type, submitter, payload) {
+    s.seq.proposal += 1;
+    const p = {
+      id: `提案-${s.seq.proposal}`, type, version: 1, submitterId: submitter ? submitter.id : null,
+      submittedAt: s.now, approvals: [], status: 'pending', rejectReason: null, payload,
+      required: PROPOSAL_TYPES[type].approvals, excluded: payload.excluded || [],
+    };
+    s.proposals.push(p);
+    return p;
+  }
+
+  // ---------- 完成 / 失败 / 结案 的账务效果 ----------
+  function completeOrder(s, o, actor, note) {
+    const m = s.members[o.memberId];
+    m.reserved[o.issuer] -= o.amount;
+    m.entitlement[o.issuer] -= o.amount; // 预占转为永久转出分录
+    s.inventory[o.issuer].ledger -= o.amount; // 库存分配转为库存出账
+    setOrderState(s, o, 'completed', actor, note);
+    log(s, null, `${o.id} 已完成：${m.name} 的 ${ISSUERS[o.issuer].name} 权益永久减少 ${o.amount} LP，军团库存出账 ${o.amount} LP。`, 'system');
+  }
+  function failOrder(s, o, actor, note) {
+    releaseReservation(s, o);
+    setOrderState(s, o, 'failed', actor, note);
+    log(s, null, `${o.id} 执行失败（确认未转）：释放成员预占 ${o.amount} LP 与库存分配。`, 'system');
+  }
+  // 07 号决策的错转处置表
+  function applyClosure(s, o, facts, actor) {
+    const m = s.members[o.memberId];
+    const { actualCorpId, actualIssuer, actualAmount } = facts;
+    const effects = [];
+    // 库存影响一律按真实事实记录
+    s.inventory[actualIssuer].ledger -= actualAmount;
+    effects.push(`${ISSUERS[actualIssuer].name} 军团库存按真实转出出账 ${actualAmount} LP`);
+    const sameCorp = actualCorpId === o.corp.corpId;
+    if (sameCorp && actualIssuer === o.issuer) {
+      m.reserved[o.issuer] -= o.amount;
+      m.entitlement[o.issuer] -= actualAmount;
+      if (actualAmount < o.amount) effects.push(`正确公司、部分转账：按实际 ${actualAmount} LP 扣减 ${m.name} 权益，释放剩余预占 ${o.amount - actualAmount} LP，不自动补转`);
+      else effects.push(`正确公司、超额/重复转账：按实际收到 ${actualAmount} LP 扣减 ${m.name} 权益（原单 ${o.amount} LP），可形成负权益`);
+    } else if (sameCorp) {
+      m.reserved[o.issuer] -= o.amount;
+      m.entitlement[actualIssuer] -= actualAmount;
+      effects.push(`正确公司、错误发行方：释放 ${ISSUERS[o.issuer].name} 预占 ${o.amount} LP，按实际发行方 ${ISSUERS[actualIssuer].name} 扣减 ${m.name} 权益 ${actualAmount} LP，不自动补转`);
+    } else {
+      m.reserved[o.issuer] -= o.amount;
+      const other = memberOwningCorp(s, actualCorpId);
+      if (other) {
+        other.entitlement[actualIssuer] -= actualAmount;
+        effects.push(`错误公司、但它是 ${other.name} 的有效结算公司：释放 ${m.name} 预占 ${o.amount} LP，按 ${ISSUERS[actualIssuer].name} 扣减 ${other.name} 权益 ${actualAmount} LP（可形成负权益）`);
+      } else {
+        s.losses.push({ at: s.now, orderId: o.id, issuer: actualIssuer, amount: actualAmount, corpId: actualCorpId, recovered: false });
+        effects.push(`错误公司且当时无人有效绑定：记录军团未追回损失 ${actualAmount} LP（${ISSUERS[actualIssuer].name}），不扣减任何成员权益，回收状态=未追回`);
+      }
+    }
+    setOrderState(s, o, 'exception_closed', actor, '异常结案（双审批通过）：' + effects.join('；'));
+    for (const e of effects) log(s, null, `${o.id} 结案处置：${e}。`, 'system');
+    return effects;
+  }
+
+  // ---------- 提案生效 ----------
+  function applyProposal(s, p, actor) {
+    if (p.type === 'opening') {
+      const m = s.members[p.payload.memberId];
+      m.entitlement = { ...p.payload.amounts };
+      m.opening.entries = { ...p.payload.amounts };
+      m.opening.status = 'awaiting_confirm';
+      m.opening.registeredCorpId = p.payload.registeredCorpId || null;
+      log(s, null, `${p.id} 双审批通过，形成 ${m.name} 的期初权益分录：Caldari Navy ${p.payload.amounts.CN} LP，Sisters of EVE ${p.payload.amounts.SOE} LP。等待成员期初确认。`, 'system');
+      // 期初为负：按 03 号决策暂停新转账（由 avail 与 entitlement<0 判定）
+    } else if (p.type === 'snapshot') {
+      const { issuer, balance } = p.payload;
+      const inv = s.inventory[issuer];
+      const diff = balance - inv.ledger;
+      inv.snapshot = { balance, approvedAt: s.now, submittedBy: p.submitterId, approvedBy: actor.id };
+      inv.staleNotified = false;
+      inv.ledger = balance;
+      if (diff > 0) {
+        log(s, null, `${ISSUERS[issuer].name} 快照批准：实际 ${balance} LP 高于账面 ${balance - diff} LP，追加「未分类库存净增加」+${diff} LP（可用于分配，但不增加任何成员权益）。`, 'warn');
+        openCase(s, 'inventory_diff', { issuer, summary: `${ISSUERS[issuer].name} 实际库存高于账面 ${diff} LP，来源待查` });
+      } else if (diff < 0) {
+        log(s, null, `${ISSUERS[issuer].name} 快照批准：实际 ${balance} LP 低于账面 ${balance - diff} LP，追加负库存调整 ${diff} LP，按原 FIFO 重算分配。成员权益不受影响。`, 'warn');
+        openCase(s, 'inventory_diff', { issuer, summary: `${ISSUERS[issuer].name} 库存短缺 ${-diff} LP，需排除权限风险后双审批接受` });
+        reallocateAfterShortage(s, issuer);
+      } else {
+        log(s, null, `${ISSUERS[issuer].name} 快照批准：实际 ${balance} LP 与账面一致。`, 'system');
+      }
+      reallocate(s, issuer, actor, '新快照批准后重算');
+    } else if (p.type === 'adjustment') {
+      const m = s.members[p.payload.memberId];
+      m.entitlement[p.payload.issuer] += p.payload.delta;
+      log(s, null, `${p.id} 双审批通过：追加权益调整分录，${m.name} 的 ${ISSUERS[p.payload.issuer].name} 权益 ${p.payload.delta >= 0 ? '+' : ''}${p.payload.delta} LP。原分录不改写。`, 'system');
+      if (p.payload.caseId) {
+        const c = s.cases.find((x) => x.id === p.payload.caseId);
+        if (c) { c.status = 'closed'; c.conclusion = `以权益调整 ${p.payload.delta} LP 结案（${p.id}）`; }
+      }
+    } else if (p.type === 'closure') {
+      const c = caseById(s, p.payload.caseId);
+      const o = orderById(s, c.orderId);
+      const effects = applyClosure(s, o, p.payload.facts, actor);
+      c.status = 'closed';
+      c.conclusion = `确认错误事实并异常结案：${effects.join('；')}`;
+    }
+    p.status = 'approved';
+  }
+
+  // ---------- 时间推进：所有超时规则 ----------
+  function applyTimeouts(s) {
+    const r = s.rules;
+    for (const o of s.orders) {
+      if (o.state === 'executing' && o.claim && s.now > o.claim.until) {
+        toException(s, o, null, `执行领取已于 ${fmtTime(o.claim.until)} 静默超时，无法证明没有转账`);
+        log(s, null, `${o.id} 领取超时进入执行异常：不能自动交给下一名执行者。`, 'warn');
+      }
+      if (o.state === 'pending_review' && s.now > o.execution.reviewDeadline) {
+        toException(s, o, null, `待复核超过 ${r.reviewHours} 小时未裁定`);
+      }
+      if (o.state === 'pending_approval' && s.now >= o.createdAt + r.approvalDays * DAY) {
+        releaseReservation(s, o);
+        setOrderState(s, o, 'cancelled', null, `待审批超过 ${r.approvalDays} 天自动取消，释放成员预占`);
+        log(s, null, `${o.id} 待审批超过 ${r.approvalDays} 天自动取消，释放 ${s.members[o.memberId].name} 的预占 ${o.amount} LP。`, 'system');
+      }
+      if (o.state === 'ready' && !o.reminded && s.now >= o.readyAt + r.readyReminderHours * HOUR) {
+        o.reminded = true;
+        log(s, null, `催办：${o.id} 进入待执行已超过 ${r.readyReminderHours} 小时仍无人领取（不会自动取消）。`, 'warn');
+      }
+    }
+    for (const c of s.cases) {
+      if (c.type === 'exec_exception' && c.status === 'open' && !c.assignReminded && s.now >= c.createdAt + 24 * HOUR) {
+        c.assignReminded = true;
+        log(s, null, `催办：${c.id} 建立超过 24 小时仍未指派异常调查者。`, 'warn');
+      }
+    }
+    for (const m of Object.values(s.members)) {
+      const pend = m.company.pending;
+      if (pend && pend.status === 'waiting' && s.now >= pend.waitUntil) {
+        const oldCorp = m.company.current ? m.company.current.corpId : null;
+        const blocking = s.orders.filter((o) => o.memberId === m.id && EXEC_CLASS.has(o.state) && o.corp.corpId === oldCorp);
+        if (blocking.length) {
+          if (!pend.blockNotified) {
+            pend.blockNotified = true;
+            log(s, null, `${m.name} 的结算公司变更等待期已满，但旧公司仍有执行类订单未终结（${blocking.map((o) => o.id).join('、')}），新公司暂不能激活。`, 'warn');
+          }
+        } else activateCompany(s, m, null);
+      }
+    }
+    for (const issuer of Object.keys(ISSUERS)) {
+      const inv = s.inventory[issuer];
+      if (inv.snapshot && !snapshotFresh(s, issuer) && !inv.staleNotified) {
+        inv.staleNotified = true;
+        log(s, null, `${ISSUERS[issuer].name} 钱包快照已超过 ${r.snapshotHours} 小时：仍可提交与审批订单，但禁止新库存分配和执行；现有待执行订单视为处理冻结，需新快照批准后按 FIFO 重算。`, 'warn');
+      }
+    }
+  }
+  function activateCompany(s, m, actor) {
+    const pend = m.company.pending;
+    if (m.company.current) m.company.history.push({ ...m.company.current, until: s.now });
+    m.company.current = { corpId: pend.corpId, name: pend.name, ticker: pend.ticker, since: s.now };
+    m.company.pending = null;
+    log(s, actor, `${m.name} 的成员结算公司生效：${corpLabel(pend.corpId)}。`, 'system');
+  }
+
+  // ---------- 动作处理器 ----------
+  const H = {};
+
+  // —— 系统 ——
+  H.ADVANCE_TIME = (s, a) => {
+    s.now += a.minutes * MIN;
+    applyTimeouts(s);
+    return `时间推进 ${fmtDuration(a.minutes * MIN)}，现在是 ${fmtTime(s.now)}`;
+  };
+
+  // —— 成员 ——
+  H.REGISTER = (s, a, actor) => {
+    const m = member(s, actor.id);
+    if (m.registered) deny(`${m.name} 已经注册`);
+    m.registered = true; m.registeredAt = s.now;
+    m.opening.status = s.openingPhaseOpen ? 'uninitialized' : 'confirmed';
+    return `${m.name} 通过 EVE SSO 完成注册。余额为零，显示「期初未初始化」，可申请初始化`;
+  };
+  H.REQUEST_OPENING_INIT = (s, a, actor) => {
+    const m = member(s, actor.id);
+    if (!m.registered) deny('尚未注册');
+    if (!s.openingPhaseOpen) deny('期初导入阶段已关闭，遗漏期初只能通过权益调整补记');
+    if (m.opening.status !== 'uninitialized') deny(`当前期初状态为「${OPENING_STATUS[m.opening.status]}」，不需要再申请`);
+    m.opening.status = 'requested'; m.opening.requestedAt = s.now;
+    return `${m.name} 申请期初初始化，已通知财务经办者对照归档旧账提交成员期初提案`;
+  };
+  H.CONFIRM_OPENING = (s, a, actor) => {
+    const m = member(s, actor.id);
+    if (m.opening.status !== 'awaiting_confirm') deny(`当前期初状态为「${OPENING_STATUS[m.opening.status]}」，没有待确认的期初`);
+    m.opening.confirmedAt = s.now;
+    if (a.dispute) {
+      const d = a.dispute;
+      if (!(Number.isFinite(d.claimedAmount)) || !d.note) deny('提出异议必须填写主张数值与说明');
+      m.opening.status = 'disputed';
+      const c = openCase(s, 'opening_dispute', { memberId: m.id, issuer: d.issuer, claimedAmount: d.claimedAmount, note: d.note, summary: `${m.name} 主张 ${ISSUERS[d.issuer].name} 期初应为 ${d.claimedAmount} LP（账本值 ${m.entitlement[d.issuer]} LP）：${d.note}` });
+      return `${m.name} 确认期初并提出异议，建立 ${c.id}。导入值在纠正前仍是账本值，可按导入值申请转账`;
+    }
+    m.opening.status = 'confirmed';
+    return `${m.name} 确认期初权益与结算公司，现在可以提交转账申请`;
+  };
+  H.SUBMIT_COMPANY = (s, a, actor) => {
+    const m = member(s, actor.id);
+    if (!m.registered) deny('尚未注册');
+    const corp = CORPS[a.corpId];
+    if (!corp) deny(`corporation_id ${a.corpId} 不存在或不是玩家公司`);
+    if (a.corpId === MAIN_CORP_ID) deny('接收公司不能是主军团本身');
+    if (m.company.pending) deny(`已有待处理的结算公司申请（${corpLabel(m.company.pending.corpId)}）`);
+    if (m.company.current && m.company.current.corpId === a.corpId) deny('该公司已是你当前有效的结算公司');
+    const clash = Object.values(s.members).find((x) => x.id !== m.id && ((x.company.current && x.company.current.corpId === a.corpId) || (x.company.pending && x.company.pending.corpId === a.corpId)));
+    if (clash) deny(`corporation_id ${a.corpId} 已关联另一成员（${clash.name}），同一公司只能属于一个成员；历史公司改绑需管理员裁定`);
+    m.company.pending = { corpId: a.corpId, name: corp.name, ticker: corp.ticker, submittedAt: s.now, status: 'pending_admin' };
+    return `${m.name} 提交结算公司 ${corpLabel(a.corpId)}，已显示官方名称与 ticker 并由成员确认，等待管理员批准`;
+  };
+  function checkOrderPreconditions(s, m, issuer, amount) {
+    if (!m.registered) deny(`${m.name} 尚未注册`);
+    if (s.openingPhaseOpen && !CONFIRMED_SET.has(m.opening.status)) deny(`${m.name} 的期初状态为「${OPENING_STATUS[m.opening.status]}」：期初导入阶段内未完成期初确认（含零期初）不能提交转账申请`);
+    if (!m.company.current) deny(`${m.name} 没有当前有效的成员结算公司`);
+    if (m.company.pending) deny(`${m.name} 处于结算公司变更流程中（${m.company.pending.status === 'waiting' ? '24 小时等待期' : '待管理员批准'}），期间不允许推进新的 LP 转账`);
+    if (!ISSUERS[issuer]) deny('未知 LP 发行方');
+    if (!Number.isInteger(amount) || amount <= 0) deny('LP 数量必须是正整数');
+    if (amount < s.rules.minTransfer) deny(`低于全局最低转账量 ${s.rules.minTransfer} LP`);
+    if (m.entitlement[issuer] < 0) deny(`${m.name} 在 ${ISSUERS[issuer].name} 的权益为负（${m.entitlement[issuer]} LP），暂停新转账，未来新增权益先偿还`);
+    if (amount > avail(m, issuer)) deny(`超过可转余额：${ISSUERS[issuer].name} 权益 ${m.entitlement[issuer]} − 预占 ${m.reserved[issuer]} = 可转 ${avail(m, issuer)} LP`);
+    const open = s.orders.find((o) => o.memberId === m.id && o.issuer === issuer && !TERMINAL.has(o.state));
+    if (open) deny(`同一成员、同一发行方最多一张未结束订单：${open.id} 仍处于「${ORDER_STATES[open.state]}」`);
+  }
+  function createOrder(s, m, issuer, amount, actor, opts) {
+    s.seq.order += 1;
+    const o = {
+      id: `单-${s.seq.order}`, memberId: m.id, issuer, amount,
+      corp: { corpId: m.company.current.corpId, name: m.company.current.name, ticker: m.company.current.ticker },
+      state: 'pending_approval', createdAt: s.now, createdBy: actor.id, onBehalf: !!opts.onBehalf, reason: opts.reason || null,
+      idempotencyKey: opts.idempotencyKey || null, approverId: null, approvedAt: null, readyAt: null, reminded: false,
+      claim: null, execution: null, corrections: [], reviewerId: null, hold: null, caseId: null, exceptionReason: null,
+      duplicateHint: null, timeline: [],
+    };
+    m.reserved[issuer] += amount;
+    o.timeline.push({ at: s.now, from: null, to: 'pending_approval', actorId: actor.id, actorName: actor.name, note: opts.onBehalf ? `管理员代建，原因：${opts.reason}` : '成员提交并预占' });
+    s.orders.push(o);
+    if (opts.idempotencyKey) s.idempotency[opts.idempotencyKey] = o.id;
+    return o;
+  }
+  H.SUBMIT_ORDER = (s, a, actor) => {
+    requireRole(actor, ['member'], '提交转账申请');
+    const m = member(s, actor.id);
+    if (a.idempotencyKey && s.idempotency[a.idempotencyKey]) {
+      const o = orderById(s, s.idempotency[a.idempotencyKey]);
+      return `幂等提交：该请求已受理，返回原订单 ${o.id}（${ORDER_STATES[o.state]}），未创建第二张`;
+    }
+    checkOrderPreconditions(s, m, a.issuer, a.amount);
+    const o = createOrder(s, m, a.issuer, a.amount, actor, { idempotencyKey: a.idempotencyKey });
+    return `${m.name} 提交 ${o.id}：向 ${o.corp.name} [${o.corp.ticker}] 转 ${ISSUERS[a.issuer].name} ${a.amount} LP，立即预占，进入待审批（可转余额降为 ${avail(m, a.issuer)} LP）`;
+  };
+  H.WITHDRAW_ORDER = (s, a, actor) => {
+    const o = orderById(s, a.orderId);
+    if (o.memberId !== actor.id) deny(`只能撤回自己的订单（${o.id} 属于 ${s.members[o.memberId].name}）`, true);
+    if (!SAFE_CANCEL_STATES.has(o.state)) deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，已被执行者领取或进入执行类状态，不能撤回；只能由执行者明确释放或经复核/调查确认未转后释放额度`);
+    releaseReservation(s, o);
+    const hadAlloc = o.state === 'ready';
+    setOrderState(s, o, 'withdrawn', actor, '成员撤回');
+    if (hadAlloc) reallocate(s, o.issuer, actor, '撤回释放库存分配');
+    return `${o.id} 已撤回，释放预占 ${o.amount} LP${hadAlloc ? ' 与库存分配' : ''}。终态不可重开，需改动请新建订单`;
+  };
+
+  // —— 财务经办者 ——
+  H.PROPOSE_OPENING = (s, a, actor) => {
+    requireRole(actor, ['finance'], '提交成员期初提案');
+    if (!s.openingPhaseOpen) deny('期初导入阶段已关闭');
+    const m = member(s, a.memberId);
+    if (!m.registered) deny(`${m.name} 尚未通过 SSO 注册，成员侧期初是逐人懒初始化，不能预导入`);
+    if (!['uninitialized', 'requested'].includes(m.opening.status)) deny(`${m.name} 期初状态为「${OPENING_STATUS[m.opening.status]}」，不能重复提案`);
+    const amounts = { CN: Number(a.amounts.CN || 0), SOE: Number(a.amounts.SOE || 0) };
+    for (const issuer of Object.keys(ISSUERS)) {
+      const approvedPos = Object.values(s.members).filter((x) => x.opening.entries && x.opening.entries[issuer] > 0).reduce((t, x) => t + x.opening.entries[issuer], 0);
+      const pendingPos = s.proposals.filter((p) => p.type === 'opening' && p.status === 'pending' && p.payload.amounts[issuer] > 0).reduce((t, p) => t + p.payload.amounts[issuer], 0);
+      if (amounts[issuer] > 0 && approvedPos + pendingPos + amounts[issuer] > s.openingTotals[issuer].positive) {
+        deny(`${ISSUERS[issuer].name} 已批准/待批的成员期初正权益 ${approvedPos + pendingPos} + 本次 ${amounts[issuer]} 超过期初权益总额 ${s.openingTotals[issuer].positive} LP，提案被拒`);
+      }
+      if (amounts[issuer] < 0 && !a.reason) deny('负期初必须填写理由与证据');
+    }
+    const p = newProposal(s, 'opening', actor, { memberId: m.id, amounts, registeredCorpId: a.registeredCorpId || null, oldLedgerRef: a.oldLedgerRef || '旧账第 ? 行', excluded: [m.id] });
+    m.opening.status = 'proposed'; m.opening.proposalId = p.id;
+    return `${actor.name} 为 ${m.name} 提交 ${p.id}：Caldari Navy ${amounts.CN} LP / Sisters of EVE ${amounts.SOE} LP，旧账登记结算公司 ${a.registeredCorpId ? corpLabel(a.registeredCorpId) : '（空）'}。需两名独立审批者批准`;
+  };
+  H.SUBMIT_SNAPSHOT = (s, a, actor) => {
+    requireRole(actor, ['finance'], '提交钱包快照');
+    if (!ISSUERS[a.issuer]) deny('未知发行方');
+    if (!Number.isInteger(a.balance) || a.balance < 0) deny('余额必须是非负整数');
+    if (s.proposals.find((p) => p.type === 'snapshot' && p.status === 'pending' && p.payload.issuer === a.issuer)) deny(`${ISSUERS[a.issuer].name} 已有待批准的快照`);
+    const p = newProposal(s, 'snapshot', actor, { issuer: a.issuer, balance: a.balance });
+    return `${actor.name} 提交 ${ISSUERS[a.issuer].name} 钱包快照 ${p.id}：余额 ${a.balance} LP（含未编辑截图与哈希）。需一名非经办审批者批准`;
+  };
+  H.CREATE_ORDER_ON_BEHALF = (s, a, actor) => {
+    requireRole(actor, ['finance'], '代建转账单');
+    if (!a.reason) deny('代建必须记录原因');
+    const m = member(s, a.memberId);
+    checkOrderPreconditions(s, m, a.issuer, a.amount);
+    const o = createOrder(s, m, a.issuer, a.amount, actor, { onBehalf: true, reason: a.reason });
+    return `${actor.name} 为 ${m.name} 代建 ${o.id}（${ISSUERS[a.issuer].name} ${a.amount} LP），立即预占并通知成员，不要求成员再次确认`;
+  };
+  H.PROPOSE_ADJUSTMENT = (s, a, actor) => {
+    requireRole(actor, ['finance'], '提交权益调整');
+    const m = member(s, a.memberId);
+    if (!Number.isInteger(a.delta) || a.delta === 0) deny('调整额必须是非零整数');
+    if (!a.reason) deny('权益调整必须填写理由');
+    const excluded = [m.id];
+    if (a.caseId) {
+      const c = caseById(s, a.caseId);
+      if (c.status === 'closed') deny(`${c.id} 已结案`);
+      c.status = 'pending_approval';
+      if (c.investigator) excluded.push(c.investigator);
+    }
+    const p = newProposal(s, 'adjustment', actor, { memberId: m.id, issuer: a.issuer, delta: a.delta, reason: a.reason, caseId: a.caseId || null, excluded });
+    if (a.caseId) caseById(s, a.caseId).proposalId = p.id;
+    return `${actor.name} 提交 ${p.id}：${m.name} 的 ${ISSUERS[a.issuer].name} 权益调整 ${a.delta >= 0 ? '+' : ''}${a.delta} LP，理由「${a.reason}」。需两名独立审批者批准`;
+  };
+
+  // —— 审批者 ——
+  H.APPROVE_PROPOSAL = (s, a, actor) => {
+    requireRole(actor, ['approver'], '批准提案');
+    const p = proposalById(s, a.proposalId);
+    if (p.status !== 'pending') deny(`${p.id} 已${p.status === 'approved' ? '批准' : '被拒绝'}`);
+    if (p.excluded.includes(actor.id)) deny(`${p.type === 'closure' && p.submitterId === actor.id ? '异常调查者' : '利益相关方（受益成员 / 执行者 / 调查者）'}不计入批准人数：${actor.name} 不能批准 ${p.id}`, true);
+    if (p.submitterId === actor.id) deny(`经办—审批分离：${actor.name} 是 ${p.id} 的经办者，不能批准自己的提案`, true);
+    if (p.approvals.includes(actor.id)) deny(`${actor.name} 已批准过 ${p.id}，同一人不能重复计数`, true);
+    p.approvals.push(actor.id);
+    if (p.approvals.length >= p.required) {
+      applyProposal(s, p, actor);
+      return `${actor.name} 批准 ${p.id}（${PROPOSAL_TYPES[p.type].label}），达到 ${p.required} 人，提案生效`;
+    }
+    return `${actor.name} 批准 ${p.id}（${PROPOSAL_TYPES[p.type].label}），已 ${p.approvals.length}/${p.required} 人，等待另一名独立审批者`;
+  };
+  H.REJECT_PROPOSAL = (s, a, actor) => {
+    requireRole(actor, ['approver'], '拒绝提案');
+    const p = proposalById(s, a.proposalId);
+    if (p.status !== 'pending') deny(`${p.id} 已结束`);
+    if (!a.reason) deny('拒绝必须写明正式理由');
+    if (p.excluded.includes(actor.id)) deny(`利益冲突：${actor.name} 不能裁定 ${p.id}`, true);
+    p.status = 'rejected'; p.rejectReason = a.reason;
+    if (p.type === 'opening') { const m = s.members[p.payload.memberId]; m.opening.status = 'requested'; m.opening.proposalId = null; }
+    if (p.type === 'closure' || (p.type === 'adjustment' && p.payload.caseId)) { const c = s.cases.find((x) => x.id === p.payload.caseId); if (c) { c.status = 'investigating'; c.proposalId = null; } }
+    return `${actor.name} 拒绝 ${p.id}：「${a.reason}」，该版本终止；如需继续须提交新版本`;
+  };
+  H.APPROVE_ORDER = (s, a, actor) => {
+    requireRole(actor, ['approver'], '审批转账单');
+    const o = orderById(s, a.orderId);
+    if (o.memberId === actor.id) deny(`利益冲突：${actor.name} 是 ${o.id} 的受益成员本人，不得审批自己的订单`, true);
+    if (o.state !== 'pending_approval') deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，不在待审批`);
+    if (o.hold) deny(`${o.id} 处理冻结中（${o.hold}），解除前不得推进`);
+    o.approverId = actor.id; o.approvedAt = s.now;
+    const block = inventoryBlockReason(s, o.issuer);
+    const can = allocatable(s, o.issuer);
+    if (!block && can >= o.amount) {
+      setOrderState(s, o, 'ready', actor, `批准；库存足够（可分配 ${can} LP），建立独占库存分配 ${o.amount} LP`);
+      o.readyAt = s.now;
+      return `${actor.name} 批准 ${o.id}，${ISSUERS[o.issuer].name} 可分配库存 ${can} LP 足够，独占分配 ${o.amount} LP，进入待执行`;
+    }
+    setOrderState(s, o, 'awaiting_inventory', actor, block ? `批准；${block}，进入待库存` : `批准；可分配库存仅 ${can} LP，不足 ${o.amount} LP，进入待库存`);
+    return `${actor.name} 批准 ${o.id}，但${block || `${ISSUERS[o.issuer].name} 可分配库存仅 ${can} LP`}，进入待库存按批准时间 FIFO 排队，成员预占保留、不自动过期`;
+  };
+  H.REJECT_ORDER = (s, a, actor) => {
+    requireRole(actor, ['approver'], '拒绝转账单');
+    const o = orderById(s, a.orderId);
+    if (o.memberId === actor.id) deny(`利益冲突：不得裁定自己的订单`, true);
+    if (o.state !== 'pending_approval') deny(`${o.id} 不在待审批`);
+    if (!a.reason) deny('拒绝必须填写成员可见的正式理由');
+    releaseReservation(s, o);
+    setOrderState(s, o, 'rejected', actor, `拒绝：${a.reason}`);
+    return `${actor.name} 拒绝 ${o.id}（理由：${a.reason}），释放预占 ${o.amount} LP`;
+  };
+  H.CANCEL_ORDER_FINANCE = (s, a, actor) => {
+    requireRole(actor, ['approver'], '取消订单');
+    const o = orderById(s, a.orderId);
+    if (o.memberId === actor.id) deny('利益冲突：不得处理自己的订单', true);
+    if (!SAFE_CANCEL_STATES.has(o.state)) deny(`${o.id} 处于「${ORDER_STATES[o.state]}」：领取后不能由管理侧直接取消，必须执行者明确释放或经复核/调查确认未转`);
+    if (!a.reason) deny('取消必须填写成员可见的正式理由');
+    releaseReservation(s, o);
+    const hadAlloc = o.state === 'ready';
+    setOrderState(s, o, 'cancelled', actor, `财务原因取消：${a.reason}`);
+    if (hadAlloc) reallocate(s, o.issuer, actor, '取消释放库存分配');
+    return `${actor.name} 取消 ${o.id}（${a.reason}），释放预占${hadAlloc ? '与库存分配' : ''}`;
+  };
+
+  // —— 执行者 ——
+  H.CLAIM_ORDER = (s, a, actor) => {
+    requireRole(actor, ['executor'], '领取订单');
+    const o = orderById(s, a.orderId);
+    if (o.memberId === actor.id) deny(`利益冲突：${actor.name} 不得执行自己的订单`, true);
+    if (o.state !== 'ready') deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，只能领取待执行订单${o.state === 'exception' ? '；执行异常调查完成前禁止再次执行' : ''}`);
+    if (o.hold) deny(`${o.id} 处理冻结中（${o.hold}）`);
+    const block = inventoryBlockReason(s, o.issuer);
+    if (block) deny(`${block}；现有分配视为处理冻结，需新快照批准后恢复`);
+    const busy = s.orders.find((x) => x.state === 'executing' && x.claim.executor === actor.id);
+    if (busy) deny(`${actor.name} 已领取 ${busy.id} 尚未登记，请先完成或释放`);
+    o.claim = { executor: actor.id, since: s.now, until: s.now + s.rules.claimMinutes * MIN, extensions: 0 };
+    setOrderState(s, o, 'executing', actor, `执行领取，${s.rules.claimMinutes} 分钟独占至 ${fmtTime(o.claim.until)}`);
+    return `${actor.name} 领取 ${o.id}，独占至 ${fmtTime(o.claim.until)}。请在游戏内操作前 15 分钟内确认 ${ISSUERS[o.issuer].name} 当前余额 ≥ ${o.amount} LP（账面 ${s.inventory[o.issuer].ledger} LP）。领取不证明 LP 已转出`;
+  };
+  H.EXTEND_CLAIM = (s, a, actor) => {
+    requireRole(actor, ['executor'], '续期');
+    const o = orderById(s, a.orderId);
+    if (o.state !== 'executing' || o.claim.executor !== actor.id) deny(`${o.id} 不是 ${actor.name} 正在执行的订单`);
+    o.claim.until += s.rules.claimMinutes * MIN; o.claim.extensions += 1;
+    o.timeline.push({ at: s.now, from: 'executing', to: 'executing', actorId: actor.id, actorName: actor.name, note: `主动续期至 ${fmtTime(o.claim.until)}` });
+    return `${actor.name} 将 ${o.id} 的领取续期至 ${fmtTime(o.claim.until)}（留痕）`;
+  };
+  H.RELEASE_CLAIM = (s, a, actor) => {
+    requireRole(actor, ['executor'], '释放领取');
+    const o = orderById(s, a.orderId);
+    if (o.state !== 'executing' || o.claim.executor !== actor.id) deny(`${o.id} 不是 ${actor.name} 正在执行的订单`);
+    o.claim = null;
+    setOrderState(s, o, 'ready', actor, '执行者明确声明尚未进行游戏操作，主动释放，退回待执行');
+    return `${actor.name} 释放 ${o.id}，退回待执行；预占与库存分配保留`;
+  };
+  H.REGISTER_EXECUTION = (s, a, actor) => {
+    requireRole(actor, ['executor'], '执行登记');
+    const o = orderById(s, a.orderId);
+    if (o.state !== 'executing') deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，不能登记`);
+    if (o.claim.executor !== actor.id) deny(`${o.id} 由 ${s.members[o.claim.executor].name} 领取，${actor.name} 不能替其登记`, true);
+    if (!CORPS[a.actualCorpId]) deny('实际接收公司 corporation_id 无效');
+    if (!ISSUERS[a.actualIssuer]) deny('实际发行方无效');
+    if (!Number.isInteger(a.actualAmount) || a.actualAmount <= 0) deny('实际数量必须是正整数');
+    s.seq.evidence += 1;
+    const hash = a.evidenceHash || (a.evidence ? `sha256:${(0xa1b2c3 + s.seq.evidence * 7919).toString(16).padStart(8, '0')}` : null);
+    const exec = {
+      executor: actor.id, at: s.now, actualCorpId: a.actualCorpId, actualIssuer: a.actualIssuer, actualAmount: a.actualAmount,
+      timeSource: a.timeSource === 'declared' ? '操作员声明时间' : '游戏画面时间', evidence: !!a.evidence, evidenceHash: hash,
+      balanceConfirmed: !!a.balanceConfirmed, reviewDeadline: s.now + s.rules.reviewHours * HOUR,
+    };
+    const warnings = [];
+    if (!exec.evidence) warnings.push('缺少原始凭证：复核者不能裁定精确转出');
+    if (!exec.balanceConfirmed) warnings.push('未声明执行前余额确认');
+    const mismatch = [];
+    if (exec.actualCorpId !== o.corp.corpId) mismatch.push(`接收公司 ${corpLabel(exec.actualCorpId)} ≠ 订单 ${o.corp.name}`);
+    if (exec.actualIssuer !== o.issuer) mismatch.push(`发行方 ${ISSUERS[exec.actualIssuer].name} ≠ 订单 ${ISSUERS[o.issuer].name}`);
+    if (exec.actualAmount !== o.amount) mismatch.push(`数量 ${exec.actualAmount} ≠ 订单 ${o.amount}`);
+    if (mismatch.length) warnings.push('结构化登记与订单不一致：' + mismatch.join('；'));
+    // 疑似重复候选：30 分钟内相同接收方、发行方、数量，或相同凭证哈希
+    const dup = s.executionsLog.find((e) => (e.evidenceHash && e.evidenceHash === hash) || (e.actualCorpId === exec.actualCorpId && e.actualIssuer === exec.actualIssuer && e.actualAmount === exec.actualAmount && Math.abs(e.at - exec.at) <= 30 * MIN));
+    if (dup) { o.duplicateHint = `与 ${dup.orderId} 的执行登记构成疑似重复候选（${dup.evidenceHash === hash ? '相同凭证哈希' : '30 分钟内相同接收方/发行方/数量'}），只触发调查，不自动认定`; warnings.push(o.duplicateHint); }
+    o.execution = exec; o.claim = null;
+    s.executionsLog.push({ orderId: o.id, ...exec });
+    setOrderState(s, o, 'pending_review', actor, `执行登记：${corpLabel(exec.actualCorpId)}，${ISSUERS[exec.actualIssuer].name} ${exec.actualAmount} LP，${exec.timeSource}，凭证 ${hash || '无'}`);
+    if (warnings.length) log(s, null, `${o.id} 登记风险提示：${warnings.join('；')}。`, 'warn');
+    return `${actor.name} 提交 ${o.id} 执行登记，进入待复核（${s.rules.reviewHours} 小时内须裁定）${warnings.length ? '；有 ' + warnings.length + ' 项风险提示' : ''}`;
+  };
+  H.CORRECT_EXECUTION = (s, a, actor) => {
+    requireRole(actor, ['executor'], '执行更正');
+    const o = orderById(s, a.orderId);
+    if (o.state !== 'pending_review') deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，只有待复核的登记可以追加更正`);
+    if (o.execution.executor !== actor.id) deny('只能更正自己的执行登记', true);
+    const before = { ...o.execution };
+    const patch = {};
+    for (const k of ['actualCorpId', 'actualIssuer', 'actualAmount']) if (a[k] !== undefined && a[k] !== null) patch[k] = a[k];
+    if (a.evidence) { s.seq.evidence += 1; patch.evidence = true; patch.evidenceHash = `sha256:${(0xa1b2c3 + s.seq.evidence * 7919).toString(16).padStart(8, '0')}`; }
+    if (!Object.keys(patch).length) deny('没有需要更正的字段');
+    o.corrections.push({ at: s.now, by: actor.id, before, patch, reason: a.reason || '' });
+    Object.assign(o.execution, patch);
+    o.execution.reviewDeadline = s.now + s.rules.reviewHours * HOUR;
+    o.timeline.push({ at: s.now, from: 'pending_review', to: 'pending_review', actorId: actor.id, actorName: actor.name, note: `追加执行更正 #${o.corrections.length}（原登记不覆盖），重新计复核时限` });
+    return `${actor.name} 对 ${o.id} 追加执行更正 #${o.corrections.length}，原登记保留，复核重新开始`;
+  };
+
+  // —— 复核者 ——
+  function checkTwoPerson(s, o, actor) {
+    const set = new Set([o.approverId, o.execution.executor, actor.id].filter(Boolean));
+    if (set.size < 2) deny(`两人控制：${actor.name} 已同时是 ${o.id} 的审批者和执行者，不能再由同一人复核；审批、执行、复核整体至少两名不同管理成员`, true);
+  }
+  H.REVIEW_ORDER = (s, a, actor) => {
+    requireRole(actor, ['reviewer'], '复核');
+    const o = orderById(s, a.orderId);
+    if (o.memberId === actor.id) deny(`利益冲突：${actor.name} 不得复核自己的订单`, true);
+    if (o.state !== 'pending_review') deny(`${o.id} 处于「${ORDER_STATES[o.state]}」，不在待复核`);
+    checkTwoPerson(s, o, actor);
+    o.reviewerId = actor.id;
+    const e = o.execution;
+    if (a.verdict === 'exact') {
+      const problems = [];
+      if (!e.evidence) problems.push('缺少原始凭证');
+      if (e.actualCorpId !== o.corp.corpId) problems.push('接收公司不符');
+      if (e.actualIssuer !== o.issuer) problems.push('发行方不符');
+      if (e.actualAmount !== o.amount) problems.push('数量不符（容差为零）');
+      if (problems.length) deny(`不能裁定精确转出：${problems.join('、')}。请选择「不确定/不一致 → 执行异常」`);
+      completeOrder(s, o, actor, '复核：精确转出，接收公司、发行方、数量均符合订单');
+      return `${actor.name} 复核 ${o.id}：精确转出 → 已完成`;
+    }
+    if (a.verdict === 'not_transferred') {
+      failOrder(s, o, actor, '复核：有充分证据确认没有 LP 转出');
+      return `${actor.name} 复核 ${o.id}：确认未转 → 执行失败，释放预占与库存分配`;
+    }
+    toException(s, o, actor, a.note ? `复核裁定不确定/不一致：${a.note}` : '复核裁定证据不足、结果不确定或内容不一致');
+    return `${actor.name} 复核 ${o.id}：不确定/不一致 → 执行异常，建立 ${o.caseId}，两类额度保留，禁止再次执行`;
+  };
+  H.CLAIM_CASE = (s, a, actor) => {
+    requireRole(actor, ['reviewer'], '担任异常调查者');
+    const c = caseById(s, a.caseId);
+    if (c.type !== 'exec_exception') deny(`${c.id} 不是执行异常案件`);
+    if (c.status !== 'open') deny(`${c.id} 已由 ${c.investigator ? s.members[c.investigator].name : '他人'} 调查中或已结案`);
+    const o = orderById(s, c.orderId);
+    if (o.memberId === actor.id) deny('利益冲突：受益成员不得担任调查者', true);
+    if (o.execution && o.execution.executor === actor.id) deny(`利益冲突：${actor.name} 是 ${o.id} 的执行者，不得自查自结，只能提交说明和补证`, true);
+    if (o.claim && o.claim.executor === actor.id) deny('利益冲突：领取该单的执行者不得担任调查者', true);
+    c.investigator = actor.id; c.status = 'investigating';
+    return `${actor.name} 担任 ${c.id} 的异常调查者（目标 72 小时结案）；其不计入后续账务处置的双审批人数`;
+  };
+  H.CONCLUDE_CASE = (s, a, actor) => {
+    const c = caseById(s, a.caseId);
+    if (c.investigator !== actor.id) deny(`只有 ${c.id} 的调查者才能形成事实结论`, true);
+    if (c.status !== 'investigating') deny(`${c.id} 当前状态不允许结论（${c.status}）`);
+    const o = orderById(s, c.orderId);
+    if (a.verdict === 'exact') {
+      if (!o.execution) deny('没有执行登记，无法认定精确转出');
+      const e = o.execution;
+      if (!(e.evidence && e.actualCorpId === o.corp.corpId && e.actualIssuer === o.issuer && e.actualAmount === o.amount)) deny('登记与订单不一致或无凭证，不能裁定精确转出；请确认错误事实并异常结案');
+      completeOrder(s, o, actor, `调查裁定精确转出（${c.id}）`);
+      c.status = 'closed'; c.conclusion = '调查确认精确转出，订单完成';
+      return `${actor.name} 裁定 ${c.id}：精确转出 → ${o.id} 已完成`;
+    }
+    if (a.verdict === 'not_transferred') {
+      failOrder(s, o, actor, `调查确认没有 LP 转出（${c.id}）`);
+      c.status = 'closed'; c.conclusion = '调查确认未转，订单执行失败，额度释放';
+      return `${actor.name} 裁定 ${c.id}：确认未转 → ${o.id} 执行失败，释放预占与库存分配`;
+    }
+    const f = a.facts || {};
+    if (!CORPS[f.actualCorpId] || !ISSUERS[f.actualIssuer] || !Number.isInteger(f.actualAmount) || f.actualAmount <= 0) deny('异常结案必须填写实际接收公司、发行方与数量');
+    const excluded = [actor.id, o.memberId];
+    if (o.execution) excluded.push(o.execution.executor);
+    const other = memberOwningCorp(s, f.actualCorpId);
+    if (other) excluded.push(other.id);
+    const p = newProposal(s, 'closure', actor, { caseId: c.id, orderId: o.id, facts: { actualCorpId: f.actualCorpId, actualIssuer: f.actualIssuer, actualAmount: f.actualAmount }, causeCategory: a.cause || '原因未知', responsible: a.responsible || '未知', excluded });
+    c.status = 'pending_approval'; c.proposalId = p.id;
+    c.conclusion = `事实结论：实际转入 ${corpLabel(f.actualCorpId)}，${ISSUERS[f.actualIssuer].name} ${f.actualAmount} LP；原因类别「${p.payload.causeCategory}」，责任人「${p.payload.responsible}」`;
+    return `${actor.name} 形成 ${c.id} 事实结论并提交 ${p.id}（异常结案账务处置），需两名独立审批者批准；调查者、执行者与利益相关成员不计入`;
+  };
+
+  // —— 管理员 ——
+  H.APPROVE_COMPANY = (s, a, actor) => {
+    requireRole(actor, ['admin'], '批准结算公司');
+    const m = member(s, a.memberId);
+    if (m.id === actor.id) deny('管理员不得批准涉及自己的绑定', true);
+    const pend = m.company.pending;
+    if (!pend || pend.status !== 'pending_admin') deny(`${m.name} 没有待批准的结算公司申请`);
+    pend.approvedBy = actor.id; pend.approvedAt = s.now;
+    const first = !m.company.current;
+    if (first && m.opening.registeredCorpId && m.opening.registeredCorpId === pend.corpId) {
+      activateCompany(s, m, actor);
+      return `${actor.name} 批准 ${m.name} 的结算公司；与期初提案登记的 corporation_id 一致，免除 24 小时等待期直接生效`;
+    }
+    pend.status = 'waiting'; pend.waitUntil = s.now + s.rules.companyWaitHours * HOUR;
+    let cancelled = [];
+    if (!first) {
+      for (const o of s.orders) {
+        if (o.memberId === m.id && SAFE_CANCEL_STATES.has(o.state)) {
+          releaseReservation(s, o);
+          setOrderState(s, o, 'cancelled', actor, '结算公司变更启动：取消尚未领取的旧公司订单并释放额度');
+          cancelled.push(o.id);
+        }
+      }
+      for (const issuer of Object.keys(ISSUERS)) reallocate(s, issuer, actor, '公司变更取消释放库存');
+    }
+    const execClass = s.orders.filter((o) => o.memberId === m.id && EXEC_CLASS.has(o.state)).map((o) => o.id);
+    return `${actor.name} 批准 ${m.name} 的结算公司 ${corpLabel(pend.corpId)}，进入 24 小时等待期至 ${fmtTime(pend.waitUntil)}${cancelled.length ? '；已取消未领取旧公司订单 ' + cancelled.join('、') : ''}${execClass.length ? '；执行类订单 ' + execClass.join('、') + ' 不得强制取消，新公司须等它们全部终结' : ''}`;
+  };
+  H.REJECT_COMPANY = (s, a, actor) => {
+    requireRole(actor, ['admin'], '拒绝结算公司');
+    const m = member(s, a.memberId);
+    if (m.id === actor.id) deny('管理员不得裁定涉及自己的绑定', true);
+    if (!m.company.pending) deny('没有待处理的结算公司申请');
+    if (!a.reason) deny('拒绝必须填写理由');
+    const c = m.company.pending; m.company.pending = null;
+    return `${actor.name} 拒绝 ${m.name} 的结算公司申请 ${corpLabel(c.corpId)}：${a.reason}`;
+  };
+  H.SET_HOLD = (s, a, actor) => {
+    requireRole(actor, ['admin'], '添加处理冻结');
+    const o = orderById(s, a.orderId);
+    if (TERMINAL.has(o.state)) deny(`${o.id} 已是终态`);
+    if (!a.reason) deny('处理冻结必须写明原因');
+    o.hold = a.reason;
+    o.timeline.push({ at: s.now, from: o.state, to: o.state, actorId: actor.id, actorName: actor.name, note: `添加处理冻结：${a.reason}（保留原状态、预占、库存分配与 FIFO 位置）` });
+    return `${actor.name} 对 ${o.id} 添加处理冻结（${a.reason}）：保留原状态「${ORDER_STATES[o.state]}」，解除前不得推进`;
+  };
+  H.RELEASE_HOLD = (s, a, actor) => {
+    requireRole(actor, ['admin'], '解除处理冻结');
+    const o = orderById(s, a.orderId);
+    if (!o.hold) deny(`${o.id} 没有处理冻结`);
+    o.hold = null;
+    o.timeline.push({ at: s.now, from: o.state, to: o.state, actorId: actor.id, actorName: actor.name, note: '解除处理冻结' });
+    reallocate(s, o.issuer, actor, '解除冻结后重算');
+    return `${actor.name} 解除 ${o.id} 的处理冻结，恢复推进`;
+  };
+
+  // —— 审计者：只读，任何写操作一律拦截（由 requireRole 覆盖）；审计导出仅作演示 ——
+  H.AUDIT_EXPORT = (s, a, actor) => {
+    requireRole(actor, ['auditor'], '导出审计记录');
+    return `${actor.name} 导出全局只读记录：${s.orders.length} 张订单、${s.proposals.length} 项提案、${s.cases.length} 个案件、${s.events.length} 条事件（不含密钥、token 与受限安全备注）`;
+  };
+
+  // ---------- 分发 ----------
+  function dispatch(prev, action) {
+    const actor = PERSONAS[action.actor] || null;
+    const s = clone(prev);
+    try {
+      const h = H[action.type];
+      if (!h) deny(`未知操作 ${action.type}`);
+      const msg = h(s, action, actor) || '完成';
+      s.lastResult = { ok: true, text: msg, actor: actor ? actor.name : '系统', type: action.type };
+      log(s, actor, msg + '。', 'ok', { actionType: action.type });
+      return { state: s, ok: true, message: msg };
+    } catch (e) {
+      if (!(e instanceof Deny)) throw e;
+      const s2 = clone(prev);
+      s2.lastResult = { ok: false, text: e.message, actor: actor ? actor.name : '系统', audit: e.audit, type: action.type };
+      log(s2, actor, `拦截：${e.message}。`, e.audit ? 'audit' : 'blocked', { actionType: action.type, audit: e.audit });
+      return { state: s2, ok: false, message: e.message };
+    }
+  }
+
+  return {
+    initialState, dispatch,
+    ROLES, PERSONAS, ISSUERS, CORPS, MAIN_CORP_ID, ORDER_STATES, TERMINAL, EXEC_CLASS, ALLOCATED_STATES, SAFE_CANCEL_STATES,
+    OPENING_STATUS, PROPOSAL_TYPES, CASE_TYPES, BASE_TIME, MIN, HOUR, DAY,
+    helpers: { fmtTime, fmtDuration, corpLabel, avail, allocatable, allocatedSum, snapshotFresh, inventoryBlockReason },
+  };
+})();
+// @@MODULE-END
+</script>
+<script>
+// @@SCENARIOS-START
+// 引导场景：每个场景从确定的初始状态开始，按顺序点按钮。expect 标明该步应当通过还是应当被拦截。
+const SCENARIOS = [
+  {
+    id: 's1', title: '1 · 主路径：注册到已完成',
+    seed: { variant: 'base' },
+    intro: '阿雷刚通过 EVE SSO 注册。走通「期初未初始化 → 申请初始化 → 财务提案 → 双审批 → 期初确认 → 绑定结算公司 → 申请 → 审批 → 领取 → 登记 → 复核 → 已完成」的完整闭环。',
+    watch: ['成员在期初确认前提交申请会被拦截，提示语是否说清了下一步责任在谁', '经办者陈经办自己批准提案、丁审批重复计数，都应被拦下', '订单每一步「权益 / 预占 / 可转 / 库存分配」四个数字如何联动', '己执行既执行又复核，为什么允许（丁审批已是第二个人）'],
+    steps: [
+      { who: 'A', label: '阿雷：通过 EVE SSO 注册', action: { type: 'REGISTER' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：直接申请转 1000 LP（应被拦）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's1-early' }, expect: 'blocked' },
+      { who: 'A', label: '阿雷：点击「申请初始化」', action: { type: 'REQUEST_OPENING_INIT' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：对照旧账提交阿雷期初提案（CN 5000 / SOE 2000，登记公司 AREH）', action: { type: 'PROPOSE_OPENING', memberId: 'A', amounts: { CN: 5000, SOE: 2000 }, registeredCorpId: '98000101', oldLedgerRef: '旧账第 12 行' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：批准自己的提案（应被拦）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'blocked' },
+      { who: 'D', label: '丁审批：批准提案（1/2）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：再批一次凑双审批（应被拦）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'blocked' },
+      { who: 'E', label: '戊多职：批准提案（2/2，形成期初权益分录）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：在期初确认页点「确认」', action: { type: 'CONFIRM_OPENING' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：申请转 1000 LP（还没有结算公司，应被拦）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's1-nocorp' }, expect: 'blocked' },
+      { who: 'A', label: '阿雷：提交结算公司 98000101（阿雷星际控股）', action: { type: 'SUBMIT_COMPANY', corpId: '98000101' }, expect: 'ok' },
+      { who: 'H', label: '辛管理：批准绑定（与提案登记一致，免 24 小时等待）', action: { type: 'APPROVE_COMPANY', memberId: 'A' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：申请 Caldari Navy 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's1-k1' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-1（库存足够 → 待执行）', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：领取 单-1（30 分钟独占）', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：执行登记（AREH / CN / 1000，附凭证，已确认余额）', action: { type: 'REGISTER_EXECUTION', orderId: '单-1', actualCorpId: '98000101', actualIssuer: 'CN', actualAmount: 1000, evidence: true, balanceConfirmed: true, timeSource: 'game' }, expect: 'ok' },
+      { who: 'F', label: '己执行：复核自己的登记 → 精确转出', action: { type: 'REVIEW_ORDER', orderId: '单-1', verdict: 'exact' }, expect: 'ok' },
+      { who: 'I', label: '壬审计：导出全部记录（只读）', action: { type: 'AUDIT_EXPORT' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's2', title: '2 · 库存不足、FIFO 与快照过期',
+    seed: { variant: 'ready', cnInventory: 1500 },
+    intro: 'Caldari Navy 军团库存只有 1500 LP。阿雷和贝拉各申请 1000 LP：第二张只能进待库存排队。随后用新钱包快照补库存、让快照过期、再出现库存短缺，观察队列如何重算。',
+    watch: ['待库存订单的成员预占是否一直保留（权益与库存分离）', '快照高于账面 → 未分类库存净增加，不增加任何成员权益', '快照过期 24 小时后：仍可审批，但不能领取', '库存短缺时后批准的订单退回待库存，先批准的保留分配'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's2-a' }, expect: 'ok' },
+      { who: 'B', label: '贝拉：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's2-b' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-1（可分配 1500 → 分配 1000）', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-2（可分配只剩 500 → 待库存）', action: { type: 'APPROVE_ORDER', orderId: '单-2' }, expect: 'ok' },
+      { who: 'G', label: '庚执行：试图领取待库存的 单-2（应被拦）', action: { type: 'CLAIM_ORDER', orderId: '单-2' }, expect: 'blocked' },
+      { who: 'C', label: '陈经办：提交新钱包快照 CN = 2600', action: { type: 'SUBMIT_SNAPSHOT', issuer: 'CN', balance: 2600 }, expect: 'ok' },
+      { who: 'E', label: '戊多职：批准快照（+1100 未分类净增加，FIFO 让 单-2 进待执行）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 25 小时（快照过期）', action: { type: 'ADVANCE_TIME', minutes: 25 * 60 }, expect: 'ok' },
+      { who: 'G', label: '庚执行：领取 单-2（快照过期，应被拦）', action: { type: 'CLAIM_ORDER', orderId: '单-2' }, expect: 'blocked' },
+      { who: 'C', label: '陈经办：提交新快照 CN = 1800（比账面少 800）', action: { type: 'SUBMIT_SNAPSHOT', issuer: 'CN', balance: 1800 }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准快照（库存短缺 → 单-2 退回待库存）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-2' }, expect: 'ok' },
+      { who: 'G', label: '庚执行：领取 单-1（快照新鲜，允许）', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's3', title: '3 · 重复提交、拆单与代建',
+    seed: { variant: 'ready' },
+    intro: '阿雷双击提交、同一发行方再开一单、换发行方开单、超额申请、撤回后重开；陈经办为贝拉代建。检验「减少重复转」的第一道防线。',
+    watch: ['同一幂等标识第二次提交：返回原单，订单数不增加', '同一成员同一发行方只允许一张未结束订单，不同发行方可以并存', '撤回后可转余额立即恢复，并可重新申请', '代建必须写原因、同样受最低数量等校验约束'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 800 LP（幂等标识 dbl-1）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 800, idempotencyKey: 'dbl-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：网络重试，再次提交同一请求（dbl-1）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 800, idempotencyKey: 'dbl-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：再开一张 CN 500 LP（应被拦：同发行方已有未结束单）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 500, idempotencyKey: 'dbl-2' }, expect: 'blocked' },
+      { who: 'A', label: '阿雷：开一张 SOE 500 LP（不同发行方，允许）', action: { type: 'SUBMIT_ORDER', issuer: 'SOE', amount: 500, idempotencyKey: 'soe-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：SOE 再申请 5000 LP（超过可转，应被拦）', action: { type: 'SUBMIT_ORDER', issuer: 'SOE', amount: 5000, idempotencyKey: 'soe-2' }, expect: 'blocked' },
+      { who: 'A', label: '阿雷：撤回 单-1', action: { type: 'WITHDRAW_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：重新申请 CN 500 LP（dbl-2，现在允许）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 500, idempotencyKey: 'dbl-2' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：为贝拉代建 CN 50 LP（低于最低 100，应被拦）', action: { type: 'CREATE_ORDER_ON_BEHALF', memberId: 'B', issuer: 'CN', amount: 50, reason: '成员口头委托' }, expect: 'blocked' },
+      { who: 'C', label: '陈经办：为贝拉代建 CN 200 LP（写明原因）', action: { type: 'CREATE_ORDER_ON_BEHALF', memberId: 'B', issuer: 'CN', amount: 200, reason: '成员在游戏内口头委托，已留聊天记录' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's4', title: '4 · 领取超时：不能交给下一个人',
+    seed: { variant: 'ready' },
+    intro: '己执行领取后掉线。30 分钟静默超时后订单进入执行异常：不能自动交给庚执行，成员也撤不回，只能由独立调查者裁定。',
+    watch: ['续期要留痕；超时后额度（预占 + 库存分配）继续被锁', '庚执行试图接手、阿雷试图撤回，都应被拦', '己执行不能自己认领调查（自查自结）', '调查确认未转 → 执行失败 → 额度释放，阿雷可以重新申请'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's4-a' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-1', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：领取 单-1', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 20 分钟', action: { type: 'ADVANCE_TIME', minutes: 20 }, expect: 'ok' },
+      { who: 'F', label: '己执行：续期 30 分钟', action: { type: 'EXTEND_CLAIM', orderId: '单-1' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 45 分钟（超过续期后的截止）', action: { type: 'ADVANCE_TIME', minutes: 45 }, expect: 'ok' },
+      { who: 'G', label: '庚执行：试图领取 单-1（应被拦：执行异常）', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'blocked' },
+      { who: 'A', label: '阿雷：试图撤回 单-1（应被拦：执行类订单）', action: { type: 'WITHDRAW_ORDER', orderId: '单-1' }, expect: 'blocked' },
+      { who: 'F', label: '己执行：试图认领 案件-1 调查（应被拦：自查自结）', action: { type: 'CLAIM_CASE', caseId: '案件-1' }, expect: 'blocked' },
+      { who: 'E', label: '戊多职：认领 案件-1 调查', action: { type: 'CLAIM_CASE', caseId: '案件-1' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：调查结论「确认未转」', action: { type: 'CONCLUDE_CASE', caseId: '案件-1', verdict: 'not_transferred' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：重新申请 CN 1000 LP（额度已释放）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's4-a2' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's5', title: '5 · 错转给另一成员的公司',
+    seed: { variant: 'ready' },
+    intro: '己执行把阿雷的 1000 LP 转进了贝拉的结算公司 BELA。看平台如何阻止「精确转出」、走执行异常、由独立调查者裁定事实，再由两名不相关审批者批准账务处置。',
+    watch: ['登记与订单不一致时，复核者不能点「精确转出」', '调查者、执行者、两位受影响成员都不能计入结案双审批；管理员没有审批权', '结案后：阿雷预占释放且权益不减；贝拉权益按实际收到扣减；库存按真实转出出账', '原单终态为「异常结案」，不自动补转；阿雷需要新建订单'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's5-a' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-1', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：领取 单-1', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：登记实际接收公司为 98000102（贝拉深空物流）', action: { type: 'REGISTER_EXECUTION', orderId: '单-1', actualCorpId: '98000102', actualIssuer: 'CN', actualAmount: 1000, evidence: true, balanceConfirmed: true, timeSource: 'game' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：复核 → 精确转出（应被拦：接收公司不符）', action: { type: 'REVIEW_ORDER', orderId: '单-1', verdict: 'exact' }, expect: 'blocked' },
+      { who: 'E', label: '戊多职：复核 → 不一致，进入执行异常', action: { type: 'REVIEW_ORDER', orderId: '单-1', verdict: 'uncertain', note: '凭证显示收款方为 BELA 而非 AREH' }, expect: 'ok' },
+      { who: 'F', label: '己执行：试图认领调查（应被拦）', action: { type: 'CLAIM_CASE', caseId: '案件-1' }, expect: 'blocked' },
+      { who: 'E', label: '戊多职：认领 案件-1 调查', action: { type: 'CLAIM_CASE', caseId: '案件-1' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：结论「确认错误事实」：实际转入 BELA / CN / 1000，责任人己执行', action: { type: 'CONCLUDE_CASE', caseId: '案件-1', verdict: 'wrong_fact', facts: { actualCorpId: '98000102', actualIssuer: 'CN', actualAmount: 1000 }, cause: '执行者选错接收公司', responsible: '己执行' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：批准结案处置（应被拦：调查者不计入）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'blocked' },
+      { who: 'D', label: '丁审批：批准结案处置（1/2）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'H', label: '辛管理：试图批准结案处置（应被拦：管理员无审批权）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'blocked' },
+      { who: 'J', label: '癸审批：批准结案处置（2/2，生效）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：重新申请 CN 1000 LP（权益未受损）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's5-a2' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's6', title: '6 · 越权、利益冲突与两人控制',
+    seed: { variant: 'ready' },
+    intro: '丁审批本人也是有权益的成员。他给自己下单后试图自批；管理员、审计者试图审批；戊多职一人包办审批 + 执行 + 复核。看哪些被拦、哪些被允许、审计日志记了什么。',
+    watch: ['受益成员本人不得审批自己的订单，即使他有审批者角色', '管理员与审计者身份本身不带财务审批权', '执行者复核自己的执行是允许的（丁/戊已是第二个人）', '同一人审批 + 执行 + 复核会在第三步被拦（两人控制），换人复核即可', '所有越权尝试都进入不可删除的权限审计日志'],
+    steps: [
+      { who: 'D', label: '丁审批（作为成员）：申请 CN 500 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 500, idempotencyKey: 's6-d' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准自己的 单-1（应被拦：利益冲突）', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'blocked' },
+      { who: 'H', label: '辛管理：批准 单-1（应被拦：管理员无审批权）', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'blocked' },
+      { who: 'I', label: '壬审计：批准 单-1（应被拦：审计只读）', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'blocked' },
+      { who: 'E', label: '戊多职：批准 单-1', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'B', label: '贝拉：申请 CN 700 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 700, idempotencyKey: 's6-b' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：批准 单-2', action: { type: 'APPROVE_ORDER', orderId: '单-2' }, expect: 'ok' },
+      { who: 'F', label: '己执行：领取 单-2', action: { type: 'CLAIM_ORDER', orderId: '单-2' }, expect: 'ok' },
+      { who: 'F', label: '己执行：登记 单-2（BELA / CN / 700，附凭证）', action: { type: 'REGISTER_EXECUTION', orderId: '单-2', actualCorpId: '98000102', actualIssuer: 'CN', actualAmount: 700, evidence: true, balanceConfirmed: true }, expect: 'ok' },
+      { who: 'F', label: '己执行：复核自己的 单-2 → 精确转出（允许：戊已是第二人）', action: { type: 'REVIEW_ORDER', orderId: '单-2', verdict: 'exact' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：领取自己批准的 单-1', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：登记 单-1（DING / CN / 500，附凭证）', action: { type: 'REGISTER_EXECUTION', orderId: '单-1', actualCorpId: '98000103', actualIssuer: 'CN', actualAmount: 500, evidence: true, balanceConfirmed: true }, expect: 'ok' },
+      { who: 'E', label: '戊多职：再复核 单-1（应被拦：一人包办三步）', action: { type: 'REVIEW_ORDER', orderId: '单-1', verdict: 'exact' }, expect: 'blocked' },
+      { who: 'F', label: '己执行：复核 单-1 → 精确转出', action: { type: 'REVIEW_ORDER', orderId: '单-1', verdict: 'exact' }, expect: 'ok' },
+      { who: 'I', label: '壬审计：导出（查看权限审计日志里的 4 次拦截）', action: { type: 'AUDIT_EXPORT' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's7', title: '7 · 超时取消、催办与管理侧取消',
+    seed: { variant: 'ready' },
+    intro: '一张单在待审批放了 7 天被自动取消；另一张批准后 24 小时没人领取只触发催办；快照过期后审批仍可进行但只能进待库存。',
+    watch: ['待审批 7 天自动取消并释放预占；待执行不自动取消，只催办', '快照过期同时出现：审批照常，但订单进待库存而非待执行', '领取前审批者可因财务原因取消，理由成员可见', '成员撤回待库存订单立即释放预占'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's7-a' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 6 天（仍在待审批）', action: { type: 'ADVANCE_TIME', minutes: 6 * 24 * 60 }, expect: 'ok' },
+      { who: null, label: '系统：再推进 1 天（满 7 天 → 自动取消）', action: { type: 'ADVANCE_TIME', minutes: 24 * 60 }, expect: 'ok' },
+      { who: 'A', label: '阿雷：重新申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's7-a2' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：提交今日快照 CN = 9000', action: { type: 'SUBMIT_SNAPSHOT', issuer: 'CN', balance: 9000 }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准快照', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-2（快照新鲜 → 待执行）', action: { type: 'APPROVE_ORDER', orderId: '单-2' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 25 小时（无人领取 → 催办；快照过期）', action: { type: 'ADVANCE_TIME', minutes: 25 * 60 }, expect: 'ok' },
+      { who: 'D', label: '丁审批：因财务原因取消 单-2', action: { type: 'CANCEL_ORDER_FINANCE', orderId: '单-2', reason: '成员要求改数量，需重新下单' }, expect: 'ok' },
+      { who: 'B', label: '贝拉：申请 CN 500 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 500, idempotencyKey: 's7-b' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-3（快照过期 → 只能进待库存）', action: { type: 'APPROVE_ORDER', orderId: '单-3' }, expect: 'ok' },
+      { who: 'B', label: '贝拉：撤回 单-3', action: { type: 'WITHDRAW_ORDER', orderId: '单-3' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's8', title: '8 · 期初异议',
+    seed: { variant: 'base' },
+    intro: '阿雷的期初提案被批为 CN 4000 LP，他认为应是 5000。确认并提出异议后仍可按导入值申请；财务经权益调整（双审批）纠正，原分录不改写。',
+    watch: ['「确认并提出异议」必须带主张数值与说明，且不阻止按导入值申请', '异议走对账案件；纠正只能通过权益调整追加', '权益调整生效后可转余额 = 5000 − 4000 预占 = 1000'],
+    steps: [
+      { who: 'A', label: '阿雷：注册', action: { type: 'REGISTER' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：申请初始化', action: { type: 'REQUEST_OPENING_INIT' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：提交期初提案 CN 4000 / SOE 0', action: { type: 'PROPOSE_OPENING', memberId: 'A', amounts: { CN: 4000, SOE: 0 }, registeredCorpId: '98000101', oldLedgerRef: '旧账第 12 行' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准（1/2）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：批准（2/2）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：确认并提出异议（主张 CN 5000）', action: { type: 'CONFIRM_OPENING', dispute: { issuer: 'CN', claimedAmount: 5000, note: '旧账第 12 行应为 5000，少记了 8 月最后一批' } }, expect: 'ok' },
+      { who: 'A', label: '阿雷：提交结算公司 98000101', action: { type: 'SUBMIT_COMPANY', corpId: '98000101' }, expect: 'ok' },
+      { who: 'H', label: '辛管理：批准绑定', action: { type: 'APPROVE_COMPANY', memberId: 'A' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：按导入值申请 CN 4000 LP（异议不阻止）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 4000, idempotencyKey: 's8-a' }, expect: 'ok' },
+      { who: 'C', label: '陈经办：对照旧账提交权益调整 +1000（关联 案件-1）', action: { type: 'PROPOSE_ADJUSTMENT', memberId: 'A', issuer: 'CN', delta: 1000, reason: '对照归档旧账第 12 行确认漏记', caseId: '案件-1' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准调整（1/2）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-2' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：批准调整（2/2，案件结案）', action: { type: 'APPROVE_PROPOSAL', proposalId: '提案-2' }, expect: 'ok' },
+    ],
+  },
+  {
+    id: 's9', title: '9 · 结算公司变更',
+    seed: { variant: 'ready' },
+    intro: '阿雷有一张执行中的 CN 单和一张待执行的 SOE 单。他申请把结算公司换成「无主漂流公司」：待执行单被取消，执行中的单不能强制取消，新公司要等它终结。',
+    watch: ['变更启动即取消未领取订单并释放额度；执行类订单保留', '变更流程中不允许新申请，提示是否说清原因', '等待期满但旧公司仍有执行类订单 → 新公司不激活', '执行类订单终结后新公司自动生效，新订单快照记录新公司'],
+    steps: [
+      { who: 'A', label: '阿雷：申请 CN 1000 LP', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 1000, idempotencyKey: 's9-a' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-1', action: { type: 'APPROVE_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'F', label: '己执行：领取 单-1（执行中）', action: { type: 'CLAIM_ORDER', orderId: '单-1' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：申请 SOE 500 LP', action: { type: 'SUBMIT_ORDER', issuer: 'SOE', amount: 500, idempotencyKey: 's9-soe' }, expect: 'ok' },
+      { who: 'D', label: '丁审批：批准 单-2（待执行）', action: { type: 'APPROVE_ORDER', orderId: '单-2' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：提交新结算公司 98000109（无主漂流公司）', action: { type: 'SUBMIT_COMPANY', corpId: '98000109' }, expect: 'ok' },
+      { who: 'H', label: '辛管理：批准变更（取消 单-2，保留 单-1，24 小时等待）', action: { type: 'APPROVE_COMPANY', memberId: 'A' }, expect: 'ok' },
+      { who: 'A', label: '阿雷：变更期间申请 CN 300 LP（应被拦）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 300, idempotencyKey: 's9-c' }, expect: 'blocked' },
+      { who: null, label: '系统：时间推进 25 小时（单-1 领取超时 → 执行异常；等待期满但被阻）', action: { type: 'ADVANCE_TIME', minutes: 25 * 60 }, expect: 'ok' },
+      { who: 'E', label: '戊多职：认领 案件-1 调查', action: { type: 'CLAIM_CASE', caseId: '案件-1' }, expect: 'ok' },
+      { who: 'E', label: '戊多职：结论「确认未转」→ 单-1 执行失败', action: { type: 'CONCLUDE_CASE', caseId: '案件-1', verdict: 'not_transferred' }, expect: 'ok' },
+      { who: null, label: '系统：时间推进 1 分钟（新公司生效）', action: { type: 'ADVANCE_TIME', minutes: 1 }, expect: 'ok' },
+      { who: 'A', label: '阿雷：申请 CN 300 LP（接收公司快照应为新公司）', action: { type: 'SUBMIT_ORDER', issuer: 'CN', amount: 300, idempotencyKey: 's9-d' }, expect: 'ok' },
+    ],
+  },
+];
+// @@SCENARIOS-END
+</script>
+<script>
+// ============================================================
+// 页面壳（可丢弃）：只负责把 LoyaltyPortMachine 的状态画出来、把点击变成 action。
+// ============================================================
+(() => {
+  const M = LoyaltyPortMachine;
+  const { fmtTime, fmtDuration, corpLabel, avail, allocatable, allocatedSum, snapshotFresh, inventoryBlockReason } = M.helpers;
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const J = (o) => esc(JSON.stringify(o));
+
+  let state = M.initialState({ variant: 'ready' });
+  let persona = 'A';
+  let scen = { id: SCENARIOS[0].id, step: -1, results: [] }; // step = -1 表示未开始
+  let eventFilter = 'all';
+  let showAllEvents = false;
+
+  const STATE_CLASS = {
+    pending_approval: 'waiting', awaiting_inventory: 'waiting', ready: 'active', executing: 'active', pending_review: 'active',
+    completed: 'good', failed: 'muted', exception: 'bad', exception_closed: 'bad', rejected: 'muted', withdrawn: 'muted', cancelled: 'muted',
+  };
+  const NEXT_HINT = {
+    pending_approval: '等待审批者批准（7 天内未批自动取消）；领取前你可以撤回',
+    awaiting_inventory: '已批准，等待军团库存按 FIFO 分配；预占保留，不会过期；你可以撤回',
+    ready: '已独占分配库存，等待执行者领取（24 小时无人领取只催办）；领取前你仍可撤回',
+    executing: '执行者已领取，正在游戏内操作；此时不能撤回',
+    pending_review: '执行已登记，等待复核者在 24 小时内裁定',
+    exception: '执行结果不确定或与订单不一致，调查中；预占与库存分配锁定，禁止再次执行',
+    completed: 'LP 已确认转出，权益永久扣减',
+    failed: '经确认没有转出，额度已释放，可重新申请',
+    exception_closed: '经调查确认发生错误事实并结案，不自动补转；见时间线里的处置说明',
+    rejected: '审批者已拒绝，额度已释放', withdrawn: '你已撤回，额度已释放', cancelled: '已取消，额度已释放',
+  };
+  const stateBadge = (o) => `<span class="badge ${STATE_CLASS[o.state]}">${esc(M.ORDER_STATES[o.state])}</span>${o.hold ? ` <span class="badge warn" title="${esc(o.hold)}">处理冻结</span>` : ''}${o.onBehalf ? ' <span class="badge waiting">代建</span>' : ''}${o.duplicateHint ? ' <span class="badge warn" title="' + esc(o.duplicateHint) + '">疑似重复候选</span>' : ''}`;
+  const P = (id) => M.PERSONAS[id];
+  const pname = (id) => (id ? P(id).name : '系统');
+  const issuerName = (id) => M.ISSUERS[id].name;
+  const quick = (label, action, cls = 'btn sm') => `<button class="${cls}" data-quick="${J(action)}">${esc(label)}</button>`;
+  const num = (n) => `<span class="${n < 0 ? 'neg' : ''}">${n}</span>`;
+  const empty = (t) => `<p class="empty">${esc(t)}</p>`;
+
+  // ---------- 通用表格 ----------
+  function ordersTable(orders, opts = {}) {
+    if (!orders.length) return empty(opts.emptyText || '暂无订单');
+    return `<div class="tablewrap"><table><thead><tr><th>单号</th>${opts.hideMember ? '' : '<th>成员</th>'}<th>发行方</th><th class="num">数量</th><th>接收公司（提交时快照）</th><th>状态</th><th>参与者</th><th>${opts.lastCol || '说明'}</th></tr></thead><tbody>${orders.map((o) => `<tr><td class="mono">${esc(o.id)}</td>${opts.hideMember ? '' : `<td>${esc(pname(o.memberId))}</td>`}<td>${esc(issuerName(o.issuer))}</td><td class="num">${o.amount}</td><td>${esc(o.corp.name)} <span class="small">[${esc(o.corp.ticker)}]</span></td><td>${stateBadge(o)}</td><td class="small">${participants(o)}</td><td>${opts.last ? opts.last(o) : esc(NEXT_HINT[o.state] || '')}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function participants(o) {
+    const parts = [];
+    if (o.approverId) parts.push(`审批 ${pname(o.approverId)}`);
+    if (o.claim) parts.push(`领取 ${pname(o.claim.executor)}${o.state === 'executing' ? `（至 ${fmtTime(o.claim.until)}）` : ''}`);
+    if (o.execution) parts.push(`登记 ${pname(o.execution.executor)}`);
+    if (o.reviewerId) parts.push(`复核 ${pname(o.reviewerId)}`);
+    if (o.caseId) parts.push(`${o.caseId}`);
+    return esc(parts.join(' · ')) || '—';
+  }
+  function orderTimeline(o) {
+    return `<details class="tl"><summary>${esc(o.id)} 时间线（${o.timeline.length} 条）</summary><ul>${o.timeline.map((t) => `<li><span class="small">${esc(fmtTime(t.at))}</span> ${esc(t.actorName)}：${t.from && t.from !== t.to ? `${esc(M.ORDER_STATES[t.from])} → ` : ''}<strong>${esc(M.ORDER_STATES[t.to])}</strong>${t.note ? ` — ${esc(t.note)}` : ''}</li>`).join('')}</ul></details>`;
+  }
+  function balanceTable(memberIds) {
+    const rows = [];
+    for (const id of memberIds) {
+      const m = state.members[id];
+      for (const issuer of Object.keys(M.ISSUERS)) {
+        if (memberIds.length > 1 && m.entitlement[issuer] === 0 && m.reserved[issuer] === 0) continue;
+        rows.push(`<tr>${memberIds.length > 1 ? `<td>${esc(m.name)}</td>` : ''}<td>${esc(issuerName(issuer))}</td><td class="num">${num(m.entitlement[issuer])}</td><td class="num">${m.reserved[issuer]}</td><td class="num"><strong>${num(avail(m, issuer))}</strong></td><td>${m.entitlement[issuer] < 0 ? '<span class="badge bad">负权益：暂停新转账</span>' : ''}</td></tr>`);
+      }
+    }
+    if (!rows.length) return empty('没有权益记录');
+    return `<div class="tablewrap"><table><thead><tr>${memberIds.length > 1 ? '<th>成员</th>' : ''}<th>LP 发行方</th><th class="num">权益</th><th class="num">预占</th><th class="num">可转余额</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  }
+  function inventoryTable() {
+    return `<div class="tablewrap"><table><thead><tr><th>LP 发行方</th><th class="num">最近批准快照</th><th>批准时间</th><th>新鲜度</th><th class="num">账面实际库存</th><th class="num">有效分配</th><th class="num">可分配</th></tr></thead><tbody>${Object.keys(M.ISSUERS).map((issuer) => {
+      const inv = state.inventory[issuer]; const fresh = snapshotFresh(state, issuer);
+      return `<tr><td>${esc(issuerName(issuer))}</td><td class="num">${inv.snapshot ? inv.snapshot.balance : '—'}</td><td class="small">${inv.snapshot ? esc(fmtTime(inv.snapshot.approvedAt)) : '—'}</td><td>${inv.snapshot ? (fresh ? `<span class="badge good">新鲜（${esc(fmtDuration(state.now - inv.snapshot.approvedAt))}前）</span>` : `<span class="badge bad">已过期 ${esc(fmtDuration(state.now - inv.snapshot.approvedAt))}</span>`) : '<span class="badge bad">无快照</span>'}</td><td class="num">${inv.ledger}</td><td class="num">${allocatedSum(state, issuer)}</td><td class="num"><strong>${allocatable(state, issuer)}</strong></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
+  function proposalSummary(p) {
+    const pl = p.payload;
+    if (p.type === 'opening') return `${pname(pl.memberId)} 期初：CN ${pl.amounts.CN} / SOE ${pl.amounts.SOE}，登记公司 ${pl.registeredCorpId ? M.CORPS[pl.registeredCorpId].ticker : '空'}，${pl.oldLedgerRef}`;
+    if (p.type === 'snapshot') return `${issuerName(pl.issuer)} 钱包快照 ${pl.balance} LP`;
+    if (p.type === 'adjustment') return `${pname(pl.memberId)} ${issuerName(pl.issuer)} ${pl.delta >= 0 ? '+' : ''}${pl.delta} LP：${pl.reason}${pl.caseId ? '（' + pl.caseId + '）' : ''}`;
+    if (p.type === 'closure') return `${pl.orderId} 结案：实际 ${M.CORPS[pl.facts.actualCorpId].ticker} / ${issuerName(pl.facts.actualIssuer)} / ${pl.facts.actualAmount} LP；原因「${pl.causeCategory}」，责任「${pl.responsible}」`;
+    return '';
+  }
+  function proposalsTable(list, withApprove) {
+    if (!list.length) return empty('暂无提案');
+    return `<div class="tablewrap"><table><thead><tr><th>提案</th><th>类型</th><th>内容</th><th>经办</th><th>审批</th><th>状态</th>${withApprove ? '<th></th>' : ''}</tr></thead><tbody>${list.map((p) => {
+      const me = persona; const excluded = p.excluded.includes(me) || p.submitterId === me;
+      return `<tr><td class="mono">${esc(p.id)}</td><td>${esc(M.PROPOSAL_TYPES[p.type].label)}</td><td>${esc(proposalSummary(p))}</td><td>${esc(pname(p.submitterId))}</td><td>${p.approvals.map(pname).map(esc).join('、') || '—'} <span class="small">(${p.approvals.length}/${p.required})</span></td><td>${p.status === 'pending' ? '<span class="badge active">待批</span>' : p.status === 'approved' ? '<span class="badge good">已生效</span>' : `<span class="badge muted">已拒绝</span> <span class="small">${esc(p.rejectReason || '')}</span>`}</td>${withApprove ? `<td>${p.status === 'pending' ? quick('批准', { type: 'APPROVE_PROPOSAL', proposalId: p.id }) + (excluded ? ' <span class="small">你是经办者/相关方，点了会被拦</span>' : '') : ''}</td>` : ''}</tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
+  function casesTable(list, opts = {}) {
+    if (!list.length) return empty('暂无对账案件');
+    return `<div class="tablewrap"><table><thead><tr><th>案件</th><th>类型</th><th>摘要</th><th>调查者</th><th>状态</th><th>结论</th>${opts.actions ? '<th></th>' : ''}</tr></thead><tbody>${list.map((c) => `<tr><td class="mono">${esc(c.id)}</td><td>${esc(M.CASE_TYPES[c.type])}</td><td>${esc(c.summary || '')}</td><td>${c.investigator ? esc(pname(c.investigator)) : '<span class="small">未指派</span>'}</td><td>${caseStatus(c)}</td><td class="small">${esc(c.conclusion || '')}</td>${opts.actions ? `<td>${c.type === 'exec_exception' && c.status === 'open' ? quick('认领调查', { type: 'CLAIM_CASE', caseId: c.id }) : ''}</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  }
+  const caseStatus = (c) => ({ open: '<span class="badge bad">待指派</span>', investigating: '<span class="badge active">调查中</span>', pending_approval: '<span class="badge waiting">处置待双审批</span>', closed: '<span class="badge good">已结案</span>' }[c.status] || c.status);
+
+  // ---------- 右栏：身份 ----------
+  function renderWho() {
+    const p = P(persona);
+    $('who').innerHTML = `<h2>我是谁 <span class="sub">所有按钮都以此身份执行</span></h2>
+      <div class="chips">${Object.values(M.PERSONAS).map((x) => `<button class="chip ${x.id === persona ? 'on' : ''}" data-persona="${x.id}">${esc(x.name)}<small>${x.roles.filter((r) => r !== 'member').map((r) => M.ROLES[r]).join('/') || '成员'}</small></button>`).join('')}</div>
+      <div class="roles">当前：<strong>${esc(p.name)}</strong> · 角色 ${p.roles.map((r) => `<span class="tag">${esc(M.ROLES[r])}</span>`).join('')}<br><span class="small">选错身份去点别人的按钮，是这个原型欢迎的用法——看拦截提示是否说清了「为什么不行、该谁做」。</span></div>`;
+  }
+  function renderMsg() {
+    const r = state.lastResult;
+    if (!r) { $('msg').innerHTML = `<div class="banner info"><span class="k">刚刚发生了什么</span>还没有操作。选一个身份，点右下方场景，或在左侧自由试玩。</div>`; return; }
+    const cls = r.ok ? 'ok' : (r.audit ? 'audit' : 'blocked');
+    $('msg').innerHTML = `<div class="banner ${cls}"><span class="k">刚刚发生了什么 · ${esc(fmtTime(state.now))} · 操作者 ${esc(r.actor)}</span>${r.ok ? '<span class="badge good">通过</span> ' : (r.audit ? '<span class="badge bad">越权 / 利益冲突，已记入权限审计日志</span> ' : '<span class="badge warn">业务规则拦截</span> ')}${esc(r.text)}</div>`;
+  }
+  function renderClock() {
+    $('clock').innerHTML = `<div class="clock"><div><span class="k small">EVE 时间（相对切换点）</span><div class="now">${esc(fmtTime(state.now))}</div></div>
+      <div class="btnrow">${[[30, '+30 分'], [60, '+1 小时'], [24 * 60, '+1 天'], [7 * 24 * 60, '+7 天']].map(([m, l]) => `<button class="btn ghost sm" data-adv="${m}">${l}</button>`).join('')}</div></div>
+      <p class="hint" style="margin:8px 0 0">推进时间会触发：领取 30 分钟超时 → 执行异常；待复核 24 小时 → 执行异常；待审批 7 天 → 自动取消；待执行 24 小时 → 催办；快照 24 小时 → 禁止分配/执行；结算公司 24 小时等待期。</p>`;
+  }
+
+  // ---------- 左栏：角色工作台 ----------
+  function renderWorkbench() {
+    const p = P(persona);
+    const parts = [`<h2>${esc(p.name)} 的工作台 <span class="sub">只显示这个身份被允许看到的内容</span></h2>`];
+    parts.push(memberPanel(state.members[persona]));
+    if (p.roles.includes('finance')) parts.push(financePanel());
+    if (p.roles.includes('approver')) parts.push(approverPanel());
+    if (p.roles.includes('executor')) parts.push(executorPanel());
+    if (p.roles.includes('reviewer')) parts.push(reviewerPanel());
+    if (p.roles.includes('admin')) parts.push(adminPanel());
+    if (p.roles.includes('auditor')) parts.push(auditorPanel());
+    $('workbench').innerHTML = parts.join('');
+  }
+  function memberPanel(m) {
+    const out = [`<h3>成员视图 <span class="sub">我的期初、结算公司、按发行方余额与订单</span></h3>`];
+    if (!m.registered) {
+      out.push(`<div class="callout info">你还没有注册。通过 EVE SSO 登录一个当前属于主军团的角色即可注册。${quick('通过 EVE SSO 注册', { type: 'REGISTER' })}</div>`);
+      return out.join('');
+    }
+    const os = m.opening.status;
+    if (os === 'uninitialized') out.push(`<div class="callout"><strong>期初未初始化。</strong>你的余额为零。切换点前旧账上的权益需要财务经办者对照归档旧账提出「成员期初提案」，两名审批者批准后由你确认，才会出现在这里。在此之前不能提交转账申请。<div class="btnrow">${quick('申请初始化（通知财务）', { type: 'REQUEST_OPENING_INIT' })}</div></div>`);
+    else if (os === 'requested') out.push(`<div class="callout info"><strong>已申请初始化</strong>（${esc(fmtTime(m.opening.requestedAt))}），等待财务经办者提交期初提案。</div>`);
+    else if (os === 'proposed') { const pr = state.proposals.find((x) => x.id === m.opening.proposalId); out.push(`<div class="callout info"><strong>期初提案审批中</strong>：${esc(pr.id)}，已 ${pr.approvals.length}/${pr.required} 名审批者批准。</div>`); }
+    else if (os === 'awaiting_confirm') {
+      const pr = state.proposals.find((x) => x.id === m.opening.proposalId);
+      out.push(`<div class="callout info"><strong>期初确认页</strong> — 请核对下列期初权益与结算公司，只能「确认」或「确认并提出异议」；异议不阻止按导入值申请，但纠正只能通过权益调整追加。
+        <div class="kv" style="margin:8px 0"><span class="k">提案编号</span><span>${esc(pr.id)}，批准于 ${esc(fmtTime(state.now))}（${pr.approvals.map(pname).join('、')}）</span><span class="k">旧账行引用</span><span>${esc(pr.payload.oldLedgerRef)}</span><span class="k">旧账登记的结算公司</span><span>${esc(corpLabel(pr.payload.registeredCorpId))}</span></div>
+        <div class="tablewrap"><table><thead><tr><th>LP 发行方</th><th class="num">期初权益</th></tr></thead><tbody>${Object.keys(M.ISSUERS).map((i) => `<tr><td>${esc(issuerName(i))}</td><td class="num">${num(m.opening.entries[i])}</td></tr>`).join('')}</tbody></table></div>
+        <div class="btnrow">${quick('确认', { type: 'CONFIRM_OPENING' }, 'btn')}</div>
+        <form class="act" data-act="CONFIRM_OPENING"><span class="title">确认并提出异议</span><label>发行方<select name="dispute.issuer">${issuerOptions()}</select></label><label>主张数值<input name="dispute.claimedAmount" data-type="int" placeholder="如 5000"></label><label>说明<input name="dispute.note" placeholder="旧账第几行、差在哪"></label><button class="btn ghost sm">确认并提出异议</button></form></div>`);
+    } else out.push(`<p class="small">期初：<span class="badge good">${esc(M.OPENING_STATUS[os])}</span> ${m.opening.confirmedAt ? '于 ' + esc(fmtTime(m.opening.confirmedAt)) : ''}</p>`);
+
+    const c = m.company;
+    let corpHtml = '';
+    if (c.current) corpHtml += `当前有效：<strong>${esc(c.current.name)}</strong> [${esc(c.current.ticker)}] <span class="mono small">${esc(c.current.corpId)}</span>，自 ${esc(fmtTime(c.current.since))}`;
+    else corpHtml += `<span class="badge bad">没有有效结算公司</span> 在下方「成员操作」里提交 corporation_id，管理员批准后生效。`;
+    if (c.pending) corpHtml += `<br>待处理：${esc(c.pending.name)} [${esc(c.pending.ticker)}] — ${c.pending.status === 'pending_admin' ? '<span class="badge waiting">等待管理员批准</span>' : `<span class="badge warn">24 小时等待期，至 ${esc(fmtTime(c.pending.waitUntil))}（还需 ${esc(fmtDuration(c.pending.waitUntil - state.now))}）</span>`}<span class="small"> 变更期间不能提交新申请。</span>`;
+    if (c.history.length) corpHtml += `<br><span class="small">历史：${c.history.map((h) => `${esc(h.ticker)}（至 ${esc(fmtTime(h.until))}）`).join('，')}</span>`;
+    out.push(`<h3>成员结算公司</h3><p style="margin:0">${corpHtml}</p>`);
+    out.push(`<h3>可转 LP 余额 <span class="sub">按发行方严格分账；可转 = 权益 − 预占</span></h3>${balanceTable([m.id])}`);
+    const mine = state.orders.filter((o) => o.memberId === m.id);
+    out.push(`<h3>我的转账单</h3>${ordersTable(mine, { hideMember: true, lastCol: '现在轮到谁 / 我能做什么', last: (o) => `${esc(NEXT_HINT[o.state])}${M.SAFE_CANCEL_STATES.has(o.state) ? ' ' + quick('撤回', { type: 'WITHDRAW_ORDER', orderId: o.id }, 'btn danger sm') : ''}` })}`);
+    if (mine.length) out.push(`<div style="margin-top:6px">${mine.map(orderTimeline).join('')}</div>`);
+    const myCases = state.cases.filter((x) => x.memberId === m.id);
+    if (myCases.length) out.push(`<h3>与我相关的对账案件</h3>${casesTable(myCases)}`);
+    return out.join('');
+  }
+  function financePanel() {
+    const waiting = Object.values(state.members).filter((m) => m.registered && ['uninitialized', 'requested'].includes(m.opening.status));
+    const out = [`<h3>财务经办者视图 <span class="sub">全局权益与库存、待初始化成员、我的提案</span></h3>`];
+    out.push(`<h3>待期初初始化的成员</h3>${waiting.length ? `<ul style="margin:0;padding-left:18px">${waiting.map((m) => `<li>${esc(m.name)} — ${esc(M.OPENING_STATUS[m.opening.status])}${m.opening.requestedAt ? '（申请于 ' + esc(fmtTime(m.opening.requestedAt)) + '）' : ''} → 在下方「财务经办者操作」提交期初提案</li>`).join('')}</ul>` : empty('没有等待初始化的成员')}`);
+    out.push(`<h3>期初权益总额 vs 已分配</h3><div class="tablewrap"><table><thead><tr><th>发行方</th><th class="num">总额（正）</th><th class="num">已批成员期初</th><th class="num">未认领期初权益</th></tr></thead><tbody>${Object.keys(M.ISSUERS).map((i) => { const approved = Object.values(state.members).filter((m) => m.opening.entries && m.opening.entries[i] > 0).reduce((t, m) => t + m.opening.entries[i], 0); return `<tr><td>${esc(issuerName(i))}</td><td class="num">${state.openingTotals[i].positive}</td><td class="num">${approved}</td><td class="num">${state.openingTotals[i].positive - approved}</td></tr>`; }).join('')}</tbody></table></div>`);
+    out.push(`<h3>全局成员权益</h3>${balanceTable(Object.keys(state.members))}`);
+    out.push(`<h3>军团 LP 库存</h3>${inventoryTable()}`);
+    out.push(`<h3>提案</h3>${proposalsTable(state.proposals.slice().reverse(), false)}`);
+    return out.join('');
+  }
+  function approverPanel() {
+    const pend = state.orders.filter((o) => o.state === 'pending_approval');
+    const out = [`<h3>审批者视图 <span class="sub">待审批订单与待批提案；批准即检查库存并分配</span></h3>`];
+    out.push(`<h3>待审批转账单</h3>${ordersTable(pend, { lastCol: '库存判断 / 操作', last: (o) => { const block = inventoryBlockReason(state, o.issuer); const can = allocatable(state, o.issuer); return `${block ? `<span class="badge warn">${esc(block)}</span>` : can >= o.amount ? `<span class="badge good">可分配 ${can} ≥ ${o.amount}，批准后直接待执行</span>` : `<span class="badge warn">可分配仅 ${can}，批准后进待库存</span>`}${o.memberId === persona ? ' <span class="badge bad">这是你自己的单</span>' : ''} ${quick('批准', { type: 'APPROVE_ORDER', orderId: o.id })}`; } })}`);
+    out.push(`<p class="hint">拒绝、财务取消需要填写成员可见理由，请用下方「审批者操作」表单。</p>`);
+    out.push(`<h3>待批提案</h3>${proposalsTable(state.proposals.filter((p) => p.status === 'pending'), true)}`);
+    out.push(`<h3>军团 LP 库存</h3>${inventoryTable()}`);
+    return out.join('');
+  }
+  function executorPanel() {
+    const ready = state.orders.filter((o) => o.state === 'ready');
+    const mine = state.orders.filter((o) => o.state === 'executing' && o.claim.executor === persona);
+    const out = [`<h3>执行者视图 <span class="sub">待执行队列、我领取中的订单、执行登记</span></h3>`];
+    out.push(`<h3>待执行队列</h3>${ordersTable(ready, { lastCol: '领取前检查', last: (o) => { const block = inventoryBlockReason(state, o.issuer); return `${block ? `<span class="badge bad">${esc(block)}</span>` : `<span class="badge good">快照新鲜</span>`}${o.hold ? ` <span class="badge warn">冻结：${esc(o.hold)}</span>` : ''} 等待 ${esc(fmtDuration(state.now - o.readyAt))} ${quick('领取（30 分钟独占）', { type: 'CLAIM_ORDER', orderId: o.id })}`; } })}`);
+    if (mine.length) {
+      for (const o of mine) {
+        const left = o.claim.until - state.now;
+        out.push(`<div class="callout ${left < 10 * M.MIN ? 'danger' : 'info'}"><strong>你正在执行 ${esc(o.id)}</strong>：向 <strong>${esc(o.corp.name)} [${esc(o.corp.ticker)}]</strong>（${esc(o.corp.corpId)}）转 <strong>${esc(issuerName(o.issuer))} ${o.amount} LP</strong>。独占至 ${esc(fmtTime(o.claim.until))}（剩余 ${esc(fmtDuration(left))}${o.claim.extensions ? '，已续期 ' + o.claim.extensions + ' 次' : ''}）。<br><span class="small">进游戏前 15 分钟内确认 ${esc(issuerName(o.issuer))} 当前余额 ≥ ${o.amount} LP（账面 ${state.inventory[o.issuer].ledger} LP）。静默超时将进入执行异常，不能自动交给他人。</span>
+          <div class="btnrow">${quick('续期 30 分钟', { type: 'EXTEND_CLAIM', orderId: o.id }, 'btn ghost sm')}${quick('尚未操作，释放回待执行', { type: 'RELEASE_CLAIM', orderId: o.id }, 'btn ghost sm')}</div>
+          ${executionForm(o)}</div>`);
+      }
+    } else out.push(`<p class="hint">你目前没有领取中的订单。</p>`);
+    return out.join('');
+  }
+  function executionForm(o) {
+    return `<form class="act" data-act="REGISTER_EXECUTION"><span class="title">执行登记 ${esc(o.id)} <span class="sub">按游戏内实际结果填写；想模拟错转就改成别的公司/数量</span></span><input type="hidden" name="orderId" value="${esc(o.id)}">
+      <label>实际接收公司<select name="actualCorpId">${corpOptions(o.corp.corpId)}</select></label><label>实际发行方<select name="actualIssuer">${issuerOptions(o.issuer)}</select></label><label>实际数量<input name="actualAmount" data-type="int" value="${o.amount}"></label>
+      <label>时间来源<select name="timeSource"><option value="game">游戏画面时间</option><option value="declared">操作员声明时间</option></select></label>
+      <label class="inline"><input type="checkbox" name="evidence" data-type="bool" checked>已上传未编辑结果截图（含成功结果、接收公司、发行方、数量）</label>
+      <label class="inline"><input type="checkbox" name="balanceConfirmed" data-type="bool" checked>已在 15 分钟内确认余额足够</label>
+      <button class="btn">提交执行登记</button></form>`;
+  }
+  function reviewerPanel() {
+    const pend = state.orders.filter((o) => o.state === 'pending_review');
+    const out = [`<h3>复核者视图 <span class="sub">逐字段核对登记与订单；不一致只能进执行异常</span></h3>`];
+    if (!pend.length) out.push(empty('没有待复核的执行登记'));
+    for (const o of pend) {
+      const e = o.execution;
+      const cell = (ok, v) => `<td class="${ok ? 'match' : 'mismatch'}">${esc(v)}${ok ? ' ✓' : ' ✗'}</td>`;
+      const parts = new Set([o.approverId, e.executor, persona].filter(Boolean));
+      out.push(`<div class="callout ${e.evidence && e.actualCorpId === o.corp.corpId && e.actualIssuer === o.issuer && e.actualAmount === o.amount ? 'info' : ''}"><strong>${esc(o.id)}</strong> — 成员 ${esc(pname(o.memberId))}，审批 ${esc(pname(o.approverId))}，执行 ${esc(pname(e.executor))}，登记于 ${esc(fmtTime(e.at))}，复核截止 ${esc(fmtTime(e.reviewDeadline))}${o.corrections.length ? `，已追加 ${o.corrections.length} 条执行更正` : ''}${o.duplicateHint ? `<br><span class="badge warn">${esc(o.duplicateHint)}</span>` : ''}
+        <div class="tablewrap" style="margin:6px 0"><table><thead><tr><th></th><th>订单要求</th><th>执行登记</th></tr></thead><tbody>
+        <tr><td>接收公司</td><td>${esc(o.corp.name)} (${esc(o.corp.corpId)})</td>${cell(e.actualCorpId === o.corp.corpId, corpLabel(e.actualCorpId))}</tr>
+        <tr><td>LP 发行方</td><td>${esc(issuerName(o.issuer))}</td>${cell(e.actualIssuer === o.issuer, issuerName(e.actualIssuer))}</tr>
+        <tr><td>数量（零容差）</td><td>${o.amount}</td>${cell(e.actualAmount === o.amount, e.actualAmount)}</tr>
+        <tr><td>原始凭证</td><td>必须</td>${cell(e.evidence, e.evidence ? '已上传 ' + e.evidenceHash : '缺失')}</tr>
+        <tr><td>时间</td><td>—</td><td>${esc(e.timeSource)}</td></tr>
+        <tr><td>执行前余额确认</td><td>15 分钟内</td>${cell(e.balanceConfirmed, e.balanceConfirmed ? '已声明' : '未声明（风险提示）')}</tr></tbody></table></div>
+        ${parts.size < 2 ? '<span class="badge bad">你已是本单的审批者和执行者，再复核会触发两人控制拦截</span> ' : ''}${o.memberId === persona ? '<span class="badge bad">这是你自己的单</span> ' : ''}
+        <div class="btnrow">${quick('精确转出 → 已完成', { type: 'REVIEW_ORDER', orderId: o.id, verdict: 'exact' })}${quick('确认未转 → 执行失败', { type: 'REVIEW_ORDER', orderId: o.id, verdict: 'not_transferred' }, 'btn ghost sm')}${quick('不确定/不一致 → 执行异常', { type: 'REVIEW_ORDER', orderId: o.id, verdict: 'uncertain' }, 'btn danger sm')}</div></div>`);
+    }
+    const cases = state.cases.filter((c) => c.type === 'exec_exception' && c.status !== 'closed');
+    out.push(`<h3>执行异常案件</h3>${casesTable(cases, { actions: true })}`);
+    for (const c of cases.filter((x) => x.investigator === persona && x.status === 'investigating')) {
+      const o = state.orders.find((x) => x.id === c.orderId);
+      out.push(`<form class="act" data-act="CONCLUDE_CASE"><span class="title">${esc(c.id)} 调查结论（${esc(o.id)}：应转 ${esc(o.corp.ticker)} / ${esc(issuerName(o.issuer))} / ${o.amount}）</span><input type="hidden" name="caseId" value="${esc(c.id)}">
+        <label>裁定<select name="verdict"><option value="wrong_fact">确认错误事实 → 异常结案（需双审批）</option><option value="exact">精确转出 → 已完成</option><option value="not_transferred">确认未转 → 执行失败</option></select></label>
+        <label>实际接收公司<select name="facts.actualCorpId">${corpOptions(o.execution ? o.execution.actualCorpId : o.corp.corpId)}</select></label><label>实际发行方<select name="facts.actualIssuer">${issuerOptions(o.execution ? o.execution.actualIssuer : o.issuer)}</select></label><label>实际数量<input name="facts.actualAmount" data-type="int" value="${o.execution ? o.execution.actualAmount : o.amount}"></label>
+        <label>原因类别<input name="cause" placeholder="如：执行者选错接收公司 / 原因未知"></label><label>责任人<input name="responsible" placeholder="姓名或「未知」"></label><button class="btn">形成事实结论</button></form>`);
+    }
+    return out.join('');
+  }
+  function adminPanel() {
+    const pendCorp = Object.values(state.members).filter((m) => m.company.pending && m.company.pending.status === 'pending_admin');
+    const waiting = Object.values(state.members).filter((m) => m.company.pending && m.company.pending.status === 'waiting');
+    const held = state.orders.filter((o) => o.hold);
+    const out = [`<h3>管理员视图 <span class="sub">身份与绑定治理；没有财务、审批、执行、复核权限</span></h3>`];
+    out.push(`<h3>待批准的结算公司</h3>${pendCorp.length ? `<div class="tablewrap"><table><thead><tr><th>成员</th><th>申请公司</th><th>与期初提案登记</th><th>当前公司</th><th></th></tr></thead><tbody>${pendCorp.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(corpLabel(m.company.pending.corpId))}</td><td>${m.opening.registeredCorpId === m.company.pending.corpId ? '<span class="badge good">一致：免 24 小时等待</span>' : '<span class="badge warn">不一致：24 小时等待期</span>'}</td><td>${m.company.current ? esc(m.company.current.ticker) + '（变更）' : '无（首次绑定）'}</td><td>${quick('批准', { type: 'APPROVE_COMPANY', memberId: m.id })}${m.id === persona ? ' <span class="small">涉及自己，会被拦</span>' : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('没有待批准的绑定')}`);
+    if (waiting.length) out.push(`<h3>等待期中的变更</h3><ul style="margin:0;padding-left:18px">${waiting.map((m) => `<li>${esc(m.name)} → ${esc(m.company.pending.ticker)}，至 ${esc(fmtTime(m.company.pending.waitUntil))}；旧公司执行类订单：${state.orders.filter((o) => o.memberId === m.id && M.EXEC_CLASS.has(o.state)).map((o) => o.id).join('、') || '无'}</li>`).join('')}</ul>`);
+    out.push(`<h3>处理冻结中的订单</h3>${held.length ? ordersTable(held, { lastCol: '冻结原因 / 操作', last: (o) => `${esc(o.hold)} ${quick('解除冻结', { type: 'RELEASE_HOLD', orderId: o.id }, 'btn ghost sm')}` }) : empty('没有冻结中的订单')}`);
+    out.push(`<h3>成员概览</h3><div class="tablewrap"><table><thead><tr><th>成员</th><th>注册</th><th>期初状态</th><th>结算公司</th><th>受阻订单</th></tr></thead><tbody>${Object.values(state.members).map((m) => `<tr><td>${esc(m.name)}</td><td>${m.registered ? '是' : '<span class="badge waiting">未注册</span>'}</td><td>${esc(M.OPENING_STATUS[m.opening.status])}</td><td>${m.company.current ? esc(m.company.current.ticker) : '—'}${m.company.pending ? ' → ' + esc(m.company.pending.ticker) : ''}</td><td class="small">${state.orders.filter((o) => o.memberId === m.id && (o.hold || o.state === 'exception' || o.state === 'awaiting_inventory')).map((o) => o.id + '(' + M.ORDER_STATES[o.state] + ')').join('、') || '—'}</td></tr>`).join('')}</tbody></table></div>`);
+    return out.join('');
+  }
+  function auditorPanel() {
+    const audit = state.events.filter((e) => e.kind === 'audit');
+    const out = [`<h3>审计者视图 <span class="sub">全局只读；密钥、token 与受限安全备注不可见</span></h3>`];
+    out.push(`<div class="btnrow">${quick('导出全部记录（演示）', { type: 'AUDIT_EXPORT' }, 'btn ghost sm')}</div>`);
+    out.push(`<h3>权限审计日志 <span class="sub">越权与利益冲突拦截，不可删除</span></h3>${audit.length ? `<ul class="events">${audit.slice().reverse().map(evLine).join('')}</ul>` : empty('还没有拦截记录')}`);
+    out.push(`<h3>执行凭证登记</h3>${state.executionsLog.length ? `<div class="tablewrap"><table><thead><tr><th>订单</th><th>执行者</th><th>时间</th><th>接收公司</th><th>发行方</th><th class="num">数量</th><th>凭证哈希</th></tr></thead><tbody>${state.executionsLog.map((e) => `<tr><td class="mono">${esc(e.orderId)}</td><td>${esc(pname(e.executor))}</td><td class="small">${esc(fmtTime(e.at))}（${esc(e.timeSource)}）</td><td>${esc(corpLabel(e.actualCorpId))}</td><td>${esc(issuerName(e.actualIssuer))}</td><td class="num">${e.actualAmount}</td><td class="mono">${esc(e.evidenceHash || '无')}</td></tr>`).join('')}</tbody></table></div>` : empty('暂无执行登记')}`);
+    out.push(`<h3>军团未追回损失</h3>${state.losses.length ? `<ul style="margin:0;padding-left:18px">${state.losses.map((l) => `<li>${esc(fmtTime(l.at))} ${esc(l.orderId)}：${esc(issuerName(l.issuer))} ${l.amount} LP → ${esc(corpLabel(l.corpId))}，回收状态：${l.recovered ? '已追回' : '未追回'}</li>`).join('')}</ul>` : empty('无')}`);
+    return out.join('');
+  }
+
+  // ---------- 全局账本 ----------
+  function renderGlobal() {
+    $('global').innerHTML = `<h2>全局账本 <span class="sub">演示用上帝视角——真实平台里成员只能看到自己的部分</span></h2>
+      <div class="grid2"><div><h3>成员权益 / 预占 / 可转</h3>${balanceTable(Object.keys(state.members))}</div><div><h3>军团 LP 库存</h3>${inventoryTable()}<p class="hint">账面实际库存 = 最近批准快照 + 已批准调整 − 已确认转出；可分配 = 账面 − 有效分配。分配不是出账。</p></div></div>
+      <h3>全部转账单</h3>${ordersTable(state.orders.slice().reverse(), { lastCol: '当前阶段' })}
+      <div class="grid2" style="margin-top:10px"><div><h3>提案</h3>${proposalsTable(state.proposals.slice().reverse(), false)}</div><div><h3>对账案件</h3>${casesTable(state.cases.slice().reverse())}</div></div>`;
+  }
+
+  // ---------- 自由试玩：全部操作 ----------
+  const issuerOptions = (sel) => Object.values(M.ISSUERS).map((i) => `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(i.name)}</option>`).join('');
+  const corpOptions = (sel) => Object.entries(M.CORPS).map(([id, c]) => `<option value="${id}" ${id === sel ? 'selected' : ''}>${esc(c.name)} [${esc(c.ticker)}] ${id}</option>`).join('');
+  const memberOptions = (filter) => Object.values(state.members).filter(filter || (() => true)).map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const orderOptions = (filter) => { const list = state.orders.filter(filter); return list.length ? list.map((o) => `<option value="${o.id}">${esc(o.id)} ${esc(pname(o.memberId))} ${esc(issuerName(o.issuer))} ${o.amount} · ${esc(M.ORDER_STATES[o.state])}</option>`).join('') : '<option value="">（无）</option>'; };
+  const proposalOptions = () => { const l = state.proposals.filter((p) => p.status === 'pending'); return l.length ? l.map((p) => `<option value="${p.id}">${esc(p.id)} ${esc(M.PROPOSAL_TYPES[p.type].label)}</option>`).join('') : '<option value="">（无）</option>'; };
+  const caseOptions = (filter) => { const l = state.cases.filter(filter || (() => true)); return l.length ? l.map((c) => `<option value="${c.id}">${esc(c.id)} ${esc(M.CASE_TYPES[c.type])} ${esc(c.status)}</option>`).join('') : '<option value="">（无）</option>'; };
+  const F = (act, title, fields, btn = '提交') => `<form class="act" data-act="${act}"><span class="title">${esc(title)}</span>${fields}<button class="btn sm">${esc(btn)}</button></form>`;
+  const L = (label, inner) => `<label>${esc(label)}${inner}</label>`;
+
+  function renderActions() {
+    const anyOrder = () => true;
+    $('actions').innerHTML = `<h2>自由试玩：全部操作 <span class="sub">以右侧选中的身份执行；不该你做的会被拦并说明原因</span></h2>
+      <div class="grid3">
+      <div><h3>成员</h3>
+        <div class="btnrow">${quick('通过 EVE SSO 注册', { type: 'REGISTER' }, 'btn ghost sm')}${quick('申请期初初始化', { type: 'REQUEST_OPENING_INIT' }, 'btn ghost sm')}${quick('期初确认', { type: 'CONFIRM_OPENING' }, 'btn ghost sm')}</div>
+        ${F('SUBMIT_COMPANY', '提交成员结算公司', L('corporation_id', `<select name="corpId">${corpOptions()}</select>`))}
+        ${F('SUBMIT_ORDER', '提交转账申请（提交即预占）', L('LP 发行方', `<select name="issuer">${issuerOptions()}</select>`) + L('数量（整数 LP）', '<input name="amount" data-type="int" value="1000">') + L('幂等标识（重试时保持相同）', '<input name="idempotencyKey" placeholder="如 k-1">'))}
+        ${F('WITHDRAW_ORDER', '撤回订单', L('订单', `<select name="orderId">${orderOptions((o) => o.memberId === persona && !M.TERMINAL.has(o.state))}</select>`), '撤回')}
+      </div>
+      <div><h3>财务经办者</h3>
+        ${F('PROPOSE_OPENING', '成员期初提案（双审批）', L('成员', `<select name="memberId">${memberOptions((m) => m.registered)}</select>`) + L('Caldari Navy', '<input name="amounts.CN" data-type="int" value="5000">') + L('Sisters of EVE', '<input name="amounts.SOE" data-type="int" value="2000">') + L('旧账登记结算公司', `<select name="registeredCorpId"><option value="">（空）</option>${corpOptions()}</select>`) + L('旧账行引用', '<input name="oldLedgerRef" value="旧账第 12 行">') + L('理由（负期初必填）', '<input name="reason">'))}
+        ${F('SUBMIT_SNAPSHOT', '钱包快照（一名非经办审批者批准）', L('LP 发行方', `<select name="issuer">${issuerOptions()}</select>`) + L('游戏内余额', '<input name="balance" data-type="int" value="9000">'))}
+        ${F('CREATE_ORDER_ON_BEHALF', '代建转账单（须记录原因）', L('成员', `<select name="memberId">${memberOptions((m) => m.registered)}</select>`) + L('发行方', `<select name="issuer">${issuerOptions()}</select>`) + L('数量', '<input name="amount" data-type="int" value="500">') + L('原因', '<input name="reason" placeholder="必填">'))}
+        ${F('PROPOSE_ADJUSTMENT', '权益调整（双审批，追加分录）', L('成员', `<select name="memberId">${memberOptions((m) => m.registered)}</select>`) + L('发行方', `<select name="issuer">${issuerOptions()}</select>`) + L('调整额（可负）', '<input name="delta" data-type="int" value="1000">') + L('理由', '<input name="reason" placeholder="必填">') + L('关联案件（可空）', `<select name="caseId"><option value="">（无）</option>${caseOptions((c) => c.status !== 'closed')}</select>`))}
+      </div>
+      <div><h3>审批者</h3>
+        ${F('APPROVE_PROPOSAL', '批准提案', L('提案', `<select name="proposalId">${proposalOptions()}</select>`), '批准')}
+        ${F('REJECT_PROPOSAL', '拒绝提案（版本终止）', L('提案', `<select name="proposalId">${proposalOptions()}</select>`) + L('正式理由', '<input name="reason" placeholder="必填">'), '拒绝')}
+        ${F('APPROVE_ORDER', '批准转账单', L('订单', `<select name="orderId">${orderOptions((o) => o.state === 'pending_approval')}</select>`), '批准')}
+        ${F('REJECT_ORDER', '拒绝转账单', L('订单', `<select name="orderId">${orderOptions((o) => o.state === 'pending_approval')}</select>`) + L('成员可见理由', '<input name="reason" placeholder="必填">'), '拒绝')}
+        ${F('CANCEL_ORDER_FINANCE', '因财务原因取消（仅领取前）', L('订单', `<select name="orderId">${orderOptions((o) => !M.TERMINAL.has(o.state))}</select>`) + L('成员可见理由', '<input name="reason" placeholder="必填">'), '取消')}
+      </div>
+      <div><h3>执行者</h3>
+        ${F('CLAIM_ORDER', '领取待执行订单', L('订单', `<select name="orderId">${orderOptions((o) => !M.TERMINAL.has(o.state))}</select>`), '领取')}
+        <div class="btnrow">${state.orders.filter((o) => o.state === 'executing').map((o) => quick(`续期 ${o.id}`, { type: 'EXTEND_CLAIM', orderId: o.id }, 'btn ghost sm') + quick(`释放 ${o.id}`, { type: 'RELEASE_CLAIM', orderId: o.id }, 'btn ghost sm')).join('') || '<span class="small">没有执行中的订单可续期/释放</span>'}</div>
+        ${F('REGISTER_EXECUTION', '执行登记', L('订单', `<select name="orderId">${orderOptions((o) => o.state === 'executing')}</select>`) + L('实际接收公司', `<select name="actualCorpId">${corpOptions()}</select>`) + L('实际发行方', `<select name="actualIssuer">${issuerOptions()}</select>`) + L('实际数量', '<input name="actualAmount" data-type="int" value="1000">') + L('时间来源', '<select name="timeSource"><option value="game">游戏画面时间</option><option value="declared">操作员声明时间</option></select>') + `<label class="inline"><input type="checkbox" name="evidence" data-type="bool" checked>已上传原始凭证</label><label class="inline"><input type="checkbox" name="balanceConfirmed" data-type="bool" checked>已确认余额</label>`)}
+        ${F('CORRECT_EXECUTION', '执行更正（追加，不覆盖；重新复核）', L('订单（待复核）', `<select name="orderId">${orderOptions((o) => o.state === 'pending_review')}</select>`) + L('更正接收公司', `<select name="actualCorpId"><option value="">（不改）</option>${corpOptions()}</select>`) + L('更正发行方', `<select name="actualIssuer"><option value="">（不改）</option>${issuerOptions()}</select>`) + L('更正数量', '<input name="actualAmount" data-type="int" placeholder="（不改）">') + `<label class="inline"><input type="checkbox" name="evidence" data-type="bool">补充凭证</label>` + L('原因', '<input name="reason">'))}
+      </div>
+      <div><h3>复核者</h3>
+        ${F('REVIEW_ORDER', '复核执行登记', L('订单', `<select name="orderId">${orderOptions((o) => o.state === 'pending_review')}</select>`) + L('裁定', '<select name="verdict"><option value="exact">精确转出 → 已完成</option><option value="not_transferred">确认未转 → 执行失败</option><option value="uncertain">不确定/不一致 → 执行异常</option></select>') + L('说明', '<input name="note">'), '裁定')}
+        ${F('CLAIM_CASE', '认领异常调查', L('案件', `<select name="caseId">${caseOptions((c) => c.type === 'exec_exception' && c.status === 'open')}</select>`), '认领')}
+        ${F('CONCLUDE_CASE', '调查结论', L('案件', `<select name="caseId">${caseOptions((c) => c.status === 'investigating')}</select>`) + L('裁定', '<select name="verdict"><option value="wrong_fact">确认错误事实 → 异常结案</option><option value="exact">精确转出</option><option value="not_transferred">确认未转</option></select>') + L('实际接收公司', `<select name="facts.actualCorpId">${corpOptions()}</select>`) + L('实际发行方', `<select name="facts.actualIssuer">${issuerOptions()}</select>`) + L('实际数量', '<input name="facts.actualAmount" data-type="int" value="1000">') + L('原因类别', '<input name="cause" placeholder="原因未知">') + L('责任人', '<input name="responsible" placeholder="未知">'))}
+      </div>
+      <div><h3>管理员</h3>
+        ${F('APPROVE_COMPANY', '批准结算公司', L('成员', `<select name="memberId">${memberOptions((m) => m.company.pending && m.company.pending.status === 'pending_admin') || '<option value="">（无）</option>'}</select>`), '批准')}
+        ${F('REJECT_COMPANY', '拒绝结算公司', L('成员', `<select name="memberId">${memberOptions((m) => !!m.company.pending) || '<option value="">（无）</option>'}</select>`) + L('理由', '<input name="reason">'), '拒绝')}
+        ${F('SET_HOLD', '添加处理冻结（保留状态与队列位置）', L('订单', `<select name="orderId">${orderOptions((o) => !M.TERMINAL.has(o.state))}</select>`) + L('原因', '<input name="reason" placeholder="如：接收公司有效性待复核">'), '冻结')}
+        ${F('RELEASE_HOLD', '解除处理冻结', L('订单', `<select name="orderId">${orderOptions((o) => !!o.hold)}</select>`), '解除')}
+        <h3>审计者</h3><div class="btnrow">${quick('导出全部记录（只读）', { type: 'AUDIT_EXPORT' }, 'btn ghost sm')}</div>
+      </div>
+      </div>`;
+  }
+
+  // ---------- 右栏：引导场景 ----------
+  function renderScenarios() {
+    const sc = SCENARIOS.find((s) => s.id === scen.id);
+    const started = scen.step >= 0;
+    $('scenarios').innerHTML = `<h2>引导场景 <span class="sub">每个场景从固定初始状态开始，按顺序点</span></h2>
+      <div class="tabs">${SCENARIOS.map((s) => `<button class="tab ${s.id === scen.id ? 'on' : ''}" data-scenario="${s.id}">${esc(s.title.split(' · ')[0])}</button>`).join('')}</div>
+      <strong>${esc(sc.title)}</strong><p class="small" style="margin:4px 0">${esc(sc.intro)}</p>
+      <details ${started ? '' : 'open'}><summary class="small">观察要点</summary><ul class="watch">${sc.watch.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></details>
+      <div class="btnrow"><button class="btn ${started ? 'ghost' : ''} sm" data-start="${sc.id}">${started ? '重置并重新开始' : '开始此场景（重置状态）'}</button>${started && scen.step >= sc.steps.length ? '<span class="badge good">场景走完</span>' : ''}</div>
+      <ol class="steps">${sc.steps.map((st, i) => {
+        const r = scen.results[i]; const cur = started && i === scen.step; const done = started && i < scen.step;
+        return `<li class="step ${cur ? 'cur' : ''} ${done ? 'done' : ''}"><span class="n">${done ? (r.matched ? '✓' : '!') : i + 1}</span><div><div class="who">${esc(st.who ? P(st.who).name + ' · ' + P(st.who).roles.filter((x) => x !== 'member').map((x) => M.ROLES[x]).join('/') || '成员' : '系统')} <span class="expect">· 预期${st.expect === 'ok' ? '通过' : '被拦'}</span></div><div>${esc(st.label)}</div>${done ? `<div class="res ${r.matched ? (r.ok ? 'ok' : 'blocked') : 'mismatch'}">${r.matched ? '' : '⚠ 与预期不符：'}${r.ok ? '通过' : '拦截'} — ${esc(r.message)}</div>` : ''}${cur ? `<button class="btn sm" data-step="${i}">执行这一步</button>` : ''}</div></li>`;
+      }).join('')}</ol>`;
+  }
+
+  // ---------- 时间线 ----------
+  function evLine(e) {
+    return `<li class="ev ${e.kind}"><span class="t">${esc(fmtTime(e.at))}</span><span class="a">${esc(e.actorName)}</span><span>${esc(e.text)}</span></li>`;
+  }
+  function renderTimeline() {
+    let list = state.events.slice().reverse();
+    if (eventFilter === 'blocked') list = list.filter((e) => e.kind === 'blocked' || e.kind === 'audit');
+    if (eventFilter === 'system') list = list.filter((e) => e.kind === 'system' || e.kind === 'warn');
+    const shown = showAllEvents ? list : list.slice(0, 40);
+    $('timeline').innerHTML = `<h2>事件时间线 <span class="sub">最新在上；成员在真实平台只看到自己的部分</span></h2>
+      <div class="btnrow">${[['all', '全部'], ['blocked', '只看拦截'], ['system', '只看系统/风险']].map(([k, l]) => `<button class="tab ${eventFilter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`).join('')}<span class="small" style="align-self:center">共 ${list.length} 条${list.length > 40 && !showAllEvents ? `，<a href="#" data-more="1">显示全部</a>` : ''}</span></div>
+      <ul class="events">${shown.map(evLine).join('') || '<li class="empty">暂无</li>'}</ul>`;
+  }
+
+  function render() {
+    renderWho(); renderMsg(); renderClock(); renderWorkbench(); renderGlobal(); renderActions(); renderScenarios(); renderTimeline();
+  }
+
+  // ---------- 事件接线 ----------
+  function act(action, who = persona) {
+    const r = M.dispatch(state, { actor: who, ...action });
+    state = r.state;
+    render();
+    return r;
+  }
+  function formToAction(form) {
+    const type = form.dataset.act; const out = { type };
+    for (const el of form.querySelectorAll('[name]')) {
+      let v;
+      if (el.dataset.type === 'bool') v = el.checked;
+      else if (el.dataset.type === 'int') v = el.value.trim() === '' ? undefined : Number(el.value);
+      else v = el.value === '' ? undefined : el.value;
+      if (v === undefined) continue;
+      const path = el.name.split('.');
+      let o = out;
+      while (path.length > 1) { const k = path.shift(); o[k] = o[k] || {}; o = o[k]; }
+      o[path[0]] = v;
+    }
+    return out;
+  }
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-quick],[data-persona],[data-adv],[data-scenario],[data-start],[data-step],[data-filter],[data-more]');
+    if (!t) return;
+    if (t.dataset.quick) { act(JSON.parse(t.dataset.quick)); }
+    else if (t.dataset.persona) { persona = t.dataset.persona; render(); }
+    else if (t.dataset.adv) { act({ type: 'ADVANCE_TIME', minutes: Number(t.dataset.adv) }, null); }
+    else if (t.dataset.scenario) { if (t.dataset.scenario !== scen.id) { scen = { id: t.dataset.scenario, step: -1, results: [] }; } renderScenarios(); }
+    else if (t.dataset.start) { const sc = SCENARIOS.find((s) => s.id === t.dataset.start); state = M.initialState(sc.seed); scen = { id: sc.id, step: 0, results: [] }; if (sc.steps[0].who) persona = sc.steps[0].who; render(); }
+    else if (t.dataset.step !== undefined) {
+      const sc = SCENARIOS.find((s) => s.id === scen.id); const i = Number(t.dataset.step);
+      if (i !== scen.step) return;
+      const st = sc.steps[i]; if (st.who) persona = st.who;
+      const r = act(st.action, st.who);
+      scen.results[i] = { ok: r.ok, message: r.message, matched: (r.ok ? 'ok' : 'blocked') === st.expect };
+      scen.step = i + 1; render();
+    }
+    else if (t.dataset.filter) { eventFilter = t.dataset.filter; renderTimeline(); }
+    else if (t.dataset.more) { ev.preventDefault(); showAllEvents = true; renderTimeline(); }
+  });
+  document.addEventListener('submit', (ev) => {
+    const form = ev.target.closest('form[data-act]'); if (!form) return;
+    ev.preventDefault();
+    act(formToAction(form));
+  });
+  render();
+
+  // 演示钩子：#autorun=s5 打开即自动跑完场景 5；&steps=4 只跑前 4 步停下；&persona=E 指定停下后的身份。
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  if (hash.get('autorun')) {
+    const sc = SCENARIOS.find((s) => s.id === hash.get('autorun'));
+    if (sc) {
+      const n = hash.get('steps') ? Math.min(Number(hash.get('steps')), sc.steps.length) : sc.steps.length;
+      state = M.initialState(sc.seed); scen = { id: sc.id, step: 0, results: [] };
+      sc.steps.slice(0, n).forEach((st, i) => {
+        if (st.who) persona = st.who;
+        const r = M.dispatch(state, { actor: st.who, ...st.action }); state = r.state;
+        scen.results[i] = { ok: r.ok, message: r.message, matched: (r.ok ? 'ok' : 'blocked') === st.expect };
+        scen.step = i + 1;
+      });
+    }
+  }
+  if (hash.get('persona') && M.PERSONAS[hash.get('persona')]) persona = hash.get('persona');
+  if (hash.toString()) render();
+})();
+</script>
+</body>
+</html>
